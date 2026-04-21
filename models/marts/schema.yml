@@ -1,0 +1,9 @@
+version: 2
+
+models:
+  - name: mart_educacao__absenteismo
+    description: >
+      Fatos agregados para análise de absenteísmo (granularidade e métricas a definir no SQL).
+    columns:
+      - name: total_observacoes_frequencia_aluno
+        description: Contagem placeholder até definir KPIs de absenteísmo.

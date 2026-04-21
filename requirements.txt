@@ -1,0 +1,5 @@
+dbt-core>=1.7,<2
+# Escolha um adapter (descomente um):
+# dbt-bigquery>=1.7,<2
+# dbt-duckdb>=1.7,<2
+# dbt-postgres>=1.7,<2

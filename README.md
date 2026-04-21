@@ -160,7 +160,7 @@ Os melhores candidatos serão chamados para a etapa de entrevistas.
 ## Estrutura Sugerida do Repositório
 
 ```
-desafio-rmi-ds/
+.
 ├── README.md
 ├── dbt_project.yml
 ├── packages.yml              # (se usar dbt packages)
@@ -185,6 +185,42 @@ desafio-rmi-ds/
 │   └── .gitkeep
 └── requirements.txt
 ```
+
+### Projeto dbt — setup e execução
+
+O repositório inclui um projeto **dbt** na raiz (camadas `staging` → `intermediate` → `marts`).
+
+**Pré-requisitos:** Python 3.10+; warehouse configurado e dados brutos carregados conforme a seção [Dados](#dados) deste README.
+
+**Setup:**
+
+```bash
+python -m venv .venv && source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+# Opcional: dbt deps  (se habilitar packages em packages.yml)
+```
+
+Configure `~/.dbt/profiles.yml` com o profile `desafio_rmi_ds` apontando para seu dataset/schema e ajuste `vars.raw_schema` / sources em `models/staging/_sources.yml` se necessário. Parquets locais (se usar): coloque em `data/` — não são versionados.
+
+**Comandos:**
+
+```bash
+dbt debug
+dbt run
+dbt test
+dbt docs generate && dbt docs serve
+```
+
+| Pasta | Uso |
+|--------|-----|
+| `models/staging` | Limpeza e padronização (`stg_educacao__*`) |
+| `models/intermediate` | Joins e métricas intermediárias |
+| `models/marts` | Tabelas analíticas para negócio |
+| `tests` | Testes singulares |
+| `macros` | Macros reutilizáveis |
+| `seeds` | CSVs auxiliares (opcional) |
+| `data` | Parquets baixados localmente (gitignored) |
+| `notebooks` | EDA opcional |
 
 ---
 

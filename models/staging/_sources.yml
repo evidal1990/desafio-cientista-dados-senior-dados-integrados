@@ -1,0 +1,18 @@
+version: 2
+
+sources:
+  - name: educacao_raw
+    description: >
+      Fontes brutas educacionais (ex.: Parquets carregados no dataset/schema do warehouse).
+    schema: "{{ var('raw_schema') }}"
+    tables:
+      - name: aluno
+        description: Cadastro de alunos (1 linha por aluno)
+      - name: escola
+        description: Cadastro de unidades escolares
+      - name: turma
+        description: Turmas (série, turno, ano letivo)
+      - name: frequencia
+        description: Frequência escolar (granularidade aluno/dia)
+      - name: avaliacao
+        description: Notas e avaliações por bimestre

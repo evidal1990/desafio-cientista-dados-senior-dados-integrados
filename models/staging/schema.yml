@@ -1,0 +1,20 @@
+version: 2
+
+models:
+  - name: stg_educacao__aluno
+    description: Staging do cadastro de alunos — padronizar nomes, tipos e regras de qualidade aqui.
+    columns:
+      - name: id_aluno
+        description: Identificador sintético do aluno (ajuste ao nome real da coluna na fonte).
+
+  - name: stg_educacao__escola
+    description: Staging do cadastro de escolas.
+
+  - name: stg_educacao__turma
+    description: Staging de turmas.
+
+  - name: stg_educacao__frequencia
+    description: Staging de frequência (aluno/dia ou granularidade da fonte).
+
+  - name: stg_educacao__avaliacao
+    description: Staging de avaliações por bimestre.
