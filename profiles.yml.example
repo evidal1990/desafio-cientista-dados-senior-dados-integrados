@@ -1,0 +1,16 @@
+# Copie para ~/.dbt/profiles.yml (recomendado) ou para ./profiles.yml e use:
+#   export DBT_PROFILES_DIR="/caminho/absoluto/deste/repo"
+# Defina POSTGRES_* no ambiente (ver comentários abaixo).
+
+desafio_rmi_ds:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('POSTGRES_HOST') }}"
+      user: "{{ env_var('POSTGRES_USER') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD') }}"
+      port: "{{ env_var('POSTGRES_PORT', '5432') | as_number }}"
+      dbname: "{{ env_var('POSTGRES_DB') }}"
+      schema: "{{ env_var('POSTGRES_DBT_SCHEMA', 'desafio_rmi_ds') }}"
+      threads: 4

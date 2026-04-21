@@ -8,6 +8,7 @@ target/
 dbt_packages/
 logs/
 .user.yml
+/profiles.yml
 
 # Parquets e dados locais (não versionar)
 data/*.parquet
