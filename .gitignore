@@ -11,5 +11,6 @@ logs/
 /profiles.yml
 
 # Parquets e dados locais (não versionar)
+data/
 data/*.parquet
 data/*.csv
