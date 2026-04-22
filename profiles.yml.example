@@ -14,7 +14,7 @@ desafio_rmi_ds:
       password: postgres
       port: 5432
       dbname: desafio_rmi_ds
-      schema: desafio_rmi_ds
+      schema: raw_educacao
       threads: 4
 
     prod:

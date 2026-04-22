@@ -1,228 +1,88 @@
-# Desafio Técnico - Cientista de Dados Sênior
+# Desafio dbt — dados educacionais (RMI)
 
-## Registro Municipal Integrado (RMI)
-
----
-
-## Contexto
-
-O **Registro Municipal Integrado (RMI)** é o data warehouse estratégico da Prefeitura do Rio de Janeiro, que consolida dados de saúde, educação, assistência social e dezenas de outros sistemas municipais. A qualidade, confiabilidade e rastreabilidade desses dados são fundamentais para políticas públicas baseadas em evidências.
-
-Como Cientista de Dados Sênior no RMI, você liderará a modelagem analítica e a governança de dados que orientam decisões para milhões de cariocas. A **engenharia de analytics** — transformação, teste e documentação de dados — é a espinha dorsal da função.
-
-Este desafio avalia suas habilidades em **modelagem de dados com dbt**, estratégia de testes e qualidade, SQL analítico e documentação técnica, usando dados educacionais anonimizados que simulam o contexto real do RMI.
+Projeto **dbt Core + Postgres**: staging → intermediate → marts. Dados anonimizados (Parquets no GCS).
 
 ---
 
-## Instruções
+## Pré-requisitos
 
-1. Faça um fork do repositório do desafio para colocar a sua solução
-2. Organize o projeto seguindo as boas práticas de dbt descritas abaixo
-3. Inclua **README.md** explicando abordagem, decisões de arquitetura e como reproduzir
-4. **Entrega**: Envie o link do repositório para `selecao.pcrj@gmail.com`
+- **Git**, **Python 3.10+**, **Docker** (opcional, para Postgres e/ou ambiente dbt).
+- Conta Google com acesso ao bucket **público** `gs://case_vagas/rmi/` (ou copiar os ficheiros por outro meio).
 
 ---
 
-## Dados
-
-Os dados deste desafio representam registros educacionais da rede municipal, **anonimizados e aleatorizados** para fins de avaliação. Eles foram disponibilizados como arquivos Parquet em um bucket do Google Cloud Storage (GCS).
-
-### Tabelas Disponíveis
-
-| Arquivo (GCS) | Descrição | Granularidade |
-|----------------|-----------|---------------|
-| `aluno.parquet` | Cadastro de alunos (IDs anonimizados, faixa etária, bairro anonimizado) | 1 linha por aluno |
-| `escola.parquet` | Cadastro de unidades escolares (IDs anonimizados, tipo, região) | 1 linha por escola |
-| `turma.parquet` | Informações de turmas (série, turno, ano letivo) | 1 linha por turma |
-| `frequencia.parquet` | Registros de frequência escolar | 1 linha por aluno/dia |
-| `avaliacao.parquet` | Notas e avaliações por bimestre | 1 linha por aluno/disciplina/bimestre |
-
-### Tabela Auxiliar Pública
-
-| Tabela (BigQuery) | Descrição |
-|--------------------|-----------|
-| `datario.dados_mestres.bairro` | Cadastro de bairros do Rio de Janeiro |
-
-### Acesso aos dados
-
-Os arquivos Parquet estão disponíveis no bucket GCS:
-
-```
-https://console.cloud.google.com/storage/browser/case_vagas/rmi
-```
-
-Alternativamente, os arquivos podem ser carregados diretamente em um dataset BigQuery pessoal para uso com dbt-bigquery (veja instruções no FAQ).
-
-**⚠️ IMPORTANTE sobre os dados:**
-
-- Os dados foram **anonimizados**: todos os identificadores pessoais (nomes, CPFs, endereços) foram removidos e substituídos por IDs sintéticos
-- Os valores numéricos foram **aleatorizados** (com preservação de distribuições e relações entre tabelas)
-- **Não tente reidentificar** registros ou cruzar com fontes externas
-- Os dados servem para avaliar sua capacidade técnica de modelagem, não para gerar insights reais sobre a rede educacional
-
----
-
-## Parte 1: Projeto dbt e Modelagem
-
-**Construa um projeto dbt do zero** (`dbt-core` + adapter de sua escolha) que transforme os dados brutos em camadas analíticas.
-
-### 1. Configuração e Estrutura do Projeto
-
-Configure o projeto dbt com sources apontando para os dados disponibilizados. Organize os models seguindo a convenção de camadas staging → intermediate → marts.
-
-**Entregue**: Projeto dbt funcional (`dbt run` executa sem erros), com `dbt_project.yml` configurado, sources definidas e estrutura de diretórios organizada.
-
-### 2. Camada de Staging
-
-Crie models de staging para **pelo menos 4 tabelas** fonte. Aplique limpeza, padronização de nomes, tipagem, tratamento de nulos e filtros básicos de qualidade.
-
-**Entregue**: Models de staging com naming convention consistente, lógica de limpeza documentada e `schema.yml` com descrições das sources e colunas.
-
-### 3. Camada Intermediate
-
-Crie **pelo menos 1 model intermediate** que combine dados de múltiplas fontes. Por exemplo: um modelo que una alunos + matrículas + frequência para calcular métricas de presença por aluno/período.
-
-**Entregue**: Model(s) intermediate com lógica de join documentada (premissas, tipo de join, tratamento de registros órfãos) e justificativa das decisões de modelagem.
-
-### 4. Camada de Marts
-
-Construa **pelo menos 1 mart** orientado a responder uma pergunta analítica relevante para gestores públicos. Sugestões (ou proponha a sua):
-
-- **Absenteísmo crônico por região:** Quais escolas/regiões têm maior taxa de alunos com frequência abaixo de 75%?
-- **Desempenho por perfil de turma:** Como a composição das turmas (tamanho, série, turno) se correlaciona com desempenho nas avaliações?
-
-**Entregue**: Mart(s) materializados como table ou incremental, com `schema.yml` contendo descrições, e uma breve análise dos resultados (pode ser no README ou em um notebook auxiliar).
-
----
-
-## Parte 2: Testes e Qualidade de Dados
-
-**Esta é a parte mais importante do desafio.** A confiabilidade dos dados do RMI depende de uma estratégia sólida de testes.
-
-### 5. Testes Genéricos
-
-Aplique testes built-in do dbt (`unique`, `not_null`, `accepted_values`, `relationships`) nos models de staging e marts. A cobertura deve ser intencional — não basta testar tudo mecanicamente, queremos ver critério na escolha do que testar e por quê.
-
-**Entregue**: Testes configurados nos `schema.yml`, todos passando com `dbt test`. Documente brevemente por que cada teste é relevante (pode ser em comentários no YAML ou no README).
-
-### 6. Testes de Regra de Negócio
-
-Crie **pelo menos 2 testes singular ou customizados** que validem regras de negócio educacionais. Exemplos:
-
-- "Nenhum registro de frequência deve ter data anterior à data de matrícula do aluno naquela turma"
-- "Todo aluno com movimentação de tipo 'abandono' deve ter sua última frequência registrada antes da data da movimentação"
-- "A soma de presença + ausência por aluno/dia não deve ultrapassar a carga horária da turma"
-
-**Entregue**: Testes implementados (em `tests/` ou como macros), passando com `dbt test`, com documentação explicando a regra validada e por que ela importa.
-
----
-
-## Parte 3: Documentação e Análise
-
-### 8. Documentação do Projeto
-
-Produza documentação que permita a um novo membro do time entender e dar manutenção ao projeto.
-
-**Entregue**: README.md com instruções de setup e execução, diagrama ou descrição do lineage (staging → intermediate → marts), decisões de arquitetura (materializations, naming conventions, estratégia de testes), trade-offs identificados e o que faria diferente com mais tempo.
-
-### 9. Análise Exploratória (opcional, diferencial)
-
-Elabore um notebook Python complementar com uma análise exploratória dos dados que justifique suas escolhas de modelagem.
-
-**Entregue**: Notebook documentado mostrando padrões encontrados nos dados, anomalias ou problemas de qualidade identificados, e como isso influenciou suas decisões no dbt.
-
----
-
-## Avaliação
-
-Você será avaliado em cada uma das categorias abaixo:
-
-- **Modelagem e arquitetura dbt**
-- **Estratégia de testes e qualidade**
-- **SQL e lógica analítica**
-- **Documentação e comunicação**
-
-Os melhores candidatos serão chamados para a etapa de entrevistas.
-
-**Dica**: profundidade importa mais que completude. Melhor ter menos models com testes excelentes e documentação clara do que muitos models superficiais.
-
-### Diferenciais
-
-- Uso de dbt packages (`dbt_utils`, `dbt_expectations`, `codegen`)
-- Configuração de `freshness` nas sources
-- Uso de tags, hooks ou exposures
-- Testes de data contracts
-- Análise exploratória complementar (Parte 3, questão 9)
-- Configuração de CI com `dbt build` em GitHub Actions
-
----
-
-## Estrutura Sugerida do Repositório
-
-```
-.
-├── README.md
-├── Dockerfile                # Build na raiz: copia dbt-config/.dbt → /root/.dbt
-├── dbt_project.yml
-├── dbt-config/               # Profile + Dockerfile opcional (contexto dbt-config/)
-│   ├── Dockerfile
-│   ├── README.md
-│   └── .dbt/
-│       └── profiles.yml
-├── packages.yml              # (se usar dbt packages)
-├── models/
-│   ├── staging/
-│   │   ├── stg_educacao__aluno.sql
-│   │   ├── stg_educacao__escola.sql
-│   │   ├── ...
-│   │   └── schema.yml
-│   ├── intermediate/
-│   │   ├── int_educacao__aluno_frequencia.sql
-│   │   └── schema.yml
-│   └── marts/
-│       ├── mart_educacao__absenteismo.sql
-│       └── schema.yml
-├── tests/                    # Testes singular
-├── macros/                   # Macros customizadas
-├── seeds/                    # Dados auxiliares (se aplicável)
-├── notebooks/                # (opcional) Análise exploratória
-│   └── eda.ipynb
-├── scripts/                  # Ex.: carga bruta Parquet → Postgres
-│   └── load_raw_educacao.py
-├── data/                     # Parquets baixados (não commitar)
-│   └── .gitkeep
-└── requirements.txt
-```
-
-### Projeto dbt — setup e execução
-
-O repositório inclui um projeto **dbt** na raiz (camadas `staging` → `intermediate` → `marts`).
-
-**Pré-requisitos:** Python 3.10+; warehouse configurado e dados brutos carregados conforme a seção [Dados](#dados) deste README.
-
-**Setup:**
+## 1. Clonar e ambiente Python
 
 ```bash
-python -m venv .venv && source .venv/bin/activate  # Windows: .venv\Scripts\activate
+git clone <URL_DO_SEU_REPO> && cd <PASTA_DO_REPO>
+python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-# Opcional: dbt deps  (se habilitar packages em packages.yml)
 ```
 
-**Docker:** na raiz use `docker build -t desafio-dbt:dev .` (o `Dockerfile` copia `dbt-config/.dbt/`). Alternativas em [`dbt-config/README.md`](dbt-config/README.md).
+---
 
-Configure o profile `desafio_rmi_ds` (nome igual ao `dbt_project.yml`) com **valores literais** em `~/.dbt/profiles.yml`, em `profiles.yml.example` (cópia) ou em `dbt-config/.dbt/profiles.yml` (copiado para a imagem Docker). Inclui `config.partial_parse`, `target` `dev` e output `prod` (schema `desafio_rmi_ds_prod`), no espírito do **passo 2.2** do [guia prático (Alice Thomaz)](https://medium.com/@alice_thomaz/guia-pr%C3%A1tico-do-dbt-desvendando-a-arquitetura-e-configura%C3%A7%C3%A3o-inicial-d7315d21ad34). **Antes do `docker build`**, se o Postgres estiver no host e o dbt rodar dentro do contêiner, altere `host` para `host.docker.internal` (Mac/Windows Docker Desktop) ou o hostname/IP correto. No **Docker em Linux**, `host.docker.internal` não resolve por padrão: use `docker run ... --add-host=host.docker.internal:host-gateway` ou veja [`dbt-config/README.md`](dbt-config/README.md). Ajuste `vars.raw_schema` / sources em `models/staging/_sources.yml` se o schema bruto tiver outro nome.
+## 2. Postgres (Docker)
 
-**Dados brutos no Postgres:** com os Parquets em `data/` (ex.: `gsutil` a partir de `gs://case_vagas/rmi/`), crie as tabelas no schema `raw_educacao` (ou o valor de `RAW_SCHEMA`) com o carregador:
+Na máquina host (porta **5432** livre):
 
 ```bash
-export POSTGRES_HOST=... POSTGRES_USER=... POSTGRES_PASSWORD=... POSTGRES_DB=...
+docker run -d --name postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=desafio_rmi_ds \
+  -p 5432:5432 \
+  postgres:16
+```
+
+- **pgAdmin / dbt no host:** Host `localhost`, porta `5432`, base `desafio_rmi_ds`, utilizador `postgres`, palavra-passe `postgres` (ajuste se mudar o `-e`).
+- **Remover:** `docker rm -f postgres` (e `docker rmi postgres:16` só depois de remover o contêiner).
+
+---
+
+## 3. Descarregar Parquets para `data/`
+
+Os ficheiros no bucket **não** têm extensão `.parquet` no nome do objeto.
+
+```bash
+mkdir -p data
+# Se o gsutil reclamar de Python 3.13 no Mac:
+export CLOUDSDK_PYTHON=/opt/homebrew/bin/python3.12   # ajuste ao seu python3.12
+gsutil -m cp \
+  "gs://case_vagas/rmi/aluno" \
+  "gs://case_vagas/rmi/avaliacao" \
+  "gs://case_vagas/rmi/escola" \
+  "gs://case_vagas/rmi/frequencia" \
+  "gs://case_vagas/rmi/turma" \
+  data/
+```
+
+(`data/` está no `.gitignore`; não versionar os binários.)
+
+---
+
+## 4. Criar tabelas brutas no Postgres
+
+O dbt lê **sources** no schema **`raw_educacao`** (variável `raw_schema` no `dbt_project.yml`).
+
+```bash
+export POSTGRES_HOST=localhost POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres POSTGRES_DB=desafio_rmi_ds
 # opcional: RAW_SCHEMA=raw_educacao  DATA_DIR=./data
 python scripts/load_raw_educacao.py
 ```
 
-O script converte colunas `Binary` (IDs) para texto hex (joins consistentes entre tabelas) e recria as tabelas a cada execução.
+Cria o schema se precisar e as tabelas `aluno`, `escola`, `turma`, `frequencia`, `avaliacao`.
 
-**Comandos:**
+---
+
+## 5. Perfil dbt (`profiles.yml`)
+
+- **Nome do profile:** `desafio_rmi_ds` (igual a `profile:` no `dbt_project.yml`).
+- Copie `dbt-config/.dbt/profiles.yml` para `~/.dbt/profiles.yml` **ou** use `profiles.yml.example` como modelo.
+- Ajuste **host**, **password** e **dbname** se necessário. O ficheiro no repo usa **valores literais** (sem `env_var`).
+- **`schema` no profile:** em **dev** está alinhado com `raw_educacao`; em **`--target prod`** usa outro schema (ex.: `desafio_rmi_ds_prod`). Em **dev**, o schema físico dos models **sem** `+schema` segue também `vars.raw_schema` via `macros/generate_schema_name.sql`.
+
+---
+
+## 6. dbt (na raiz do repo, com `.venv` ativo)
 
 ```bash
 dbt debug
@@ -231,37 +91,68 @@ dbt test
 dbt docs generate && dbt docs serve
 ```
 
-| Pasta | Uso |
-|--------|-----|
-| `models/staging` | Limpeza e padronização (`stg_educacao__*`) |
-| `models/intermediate` | Joins e métricas intermediárias |
-| `models/marts` | Tabelas analíticas para negócio |
-| `tests` | Testes singulares |
-| `macros` | Macros reutilizáveis |
-| `seeds` | CSVs auxiliares (opcional) |
-| `data` | Parquets baixados localmente (gitignored) |
-| `notebooks` | EDA opcional |
+- **Só staging:** `dbt run --select path:models/staging`
+- **`dbt compile`** não cria objetos no warehouse; só **`dbt run`** / **`dbt build`**.
 
 ---
 
-## FAQ
+## 7. Docker — imagem com dbt (opcional)
 
-**1. Preciso usar BigQuery como warehouse?**
-Não obrigatoriamente. Você pode carregar os Parquets em um dataset BigQuery pessoal (recomendado para simular o ambiente real) ou, por exemplo, usar DuckDB como alternativa local (`dbt-duckdb`). O importante é que o projeto dbt funcione end-to-end.
+**Build** (na raiz do repositório):
 
-**4. Os dados estão anonimizados — posso confiar nas relações entre tabelas?**
-Sim. As chaves de relacionamento (IDs de aluno, escola, turma) foram preservadas consistentemente entre as tabelas. As distribuições estatísticas foram mantidas, mas os valores individuais foram aleatorizados.
+```bash
+docker build -t desafio-dbt:dev .
+```
 
-**5. Preciso fazer todas as partes?**
-Sim, exceto a Parte 3 questão 9 (análise exploratória), que é opcional. Mas profundidade importa mais que completude — melhor fazer menos com excelência.
+**Run** (monta o código em `/work`; Postgres no host no Mac/Windows):
 
-**6. Posso usar dbt packages?**
-Sim, e é um diferencial! Sugestões: `dbt_utils`, `dbt_expectations`, `codegen`.
+```bash
+docker run -it --rm --name desafio-dbt-dev \
+  -v "$PWD:/work" -w /work \
+  desafio-dbt:dev bash
+```
+
+Dentro do contêiner: `cd /work`, ajuste `host` no `/root/.dbt/profiles.yml` para **`host.docker.internal`** se o Postgres correr no **host**. No **Docker em Linux**:
+
+```bash
+docker run -it --rm --name desafio-dbt-dev \
+  --add-host=host.docker.internal:host-gateway \
+  -v "$PWD:/work" -w /work \
+  desafio-dbt:dev bash
+```
+
+Alternativa de build: `docker build -f dbt-config/Dockerfile -t desafio-dbt:dev dbt-config` — ver [`dbt-config/README.md`](dbt-config/README.md).
+
+**Remover imagem/contêiner dbt:** `docker rm -f desafio-dbt-dev` → `docker rmi desafio-dbt:dev`.
 
 ---
 
-## Contato
+## 8. Onde ficam as coisas no Postgres
 
-Dúvidas? Envie um email para: **<fernanda.scovino@prefeitura.rio>**
+| O quê | Onde |
+|--------|--------|
+| Tabelas brutas (carga Python) | schema **`raw_educacao`** |
+| Views `stg_*` e marts (dev) | mesmo schema **`raw_educacao`** (macro `generate_schema_name`; `target` ≠ `prod`) |
+| Marts em **prod** | schema do output **`prod`** no `profiles.yml` |
 
-Boa sorte! 🚀
+---
+
+## 9. Estrutura útil do repositório
+
+```
+models/staging/     # stg_* + _sources.yml
+models/intermediate/
+models/marts/
+scripts/load_raw_educacao.py
+dbt-config/.dbt/profiles.yml
+Dockerfile
+dbt_project.yml
+```
+
+---
+
+## 10. Pacotes dbt
+
+Se usar `packages.yml`: `dbt deps` antes de `dbt run`.
+
+---

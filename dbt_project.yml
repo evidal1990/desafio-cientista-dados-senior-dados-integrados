@@ -25,4 +25,6 @@ models:
       +materialized: table
 
 vars:
+  # Schema das fontes (`source()`) e, por omissão, dos models sem `+schema`
+  # (ver `macros/generate_schema_name.sql`).
   raw_schema: raw_educacao
