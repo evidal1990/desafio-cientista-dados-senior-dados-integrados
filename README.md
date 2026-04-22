@@ -162,7 +162,13 @@ Os melhores candidatos serão chamados para a etapa de entrevistas.
 ```
 .
 ├── README.md
+├── Dockerfile                # Build na raiz: copia dbt-config/.dbt → /root/.dbt
 ├── dbt_project.yml
+├── dbt-config/               # Profile + Dockerfile opcional (contexto dbt-config/)
+│   ├── Dockerfile
+│   ├── README.md
+│   └── .dbt/
+│       └── profiles.yml
 ├── packages.yml              # (se usar dbt packages)
 ├── models/
 │   ├── staging/
@@ -181,6 +187,8 @@ Os melhores candidatos serão chamados para a etapa de entrevistas.
 ├── seeds/                    # Dados auxiliares (se aplicável)
 ├── notebooks/                # (opcional) Análise exploratória
 │   └── eda.ipynb
+├── scripts/                  # Ex.: carga bruta Parquet → Postgres
+│   └── load_raw_educacao.py
 ├── data/                     # Parquets baixados (não commitar)
 │   └── .gitkeep
 └── requirements.txt
@@ -200,7 +208,19 @@ pip install -r requirements.txt
 # Opcional: dbt deps  (se habilitar packages em packages.yml)
 ```
 
-Configure `~/.dbt/profiles.yml` com o profile `desafio_rmi_ds` apontando para seu dataset/schema e ajuste `vars.raw_schema` / sources em `models/staging/_sources.yml` se necessário. Parquets locais (se usar): coloque em `data/` — não são versionados.
+**Docker:** na raiz use `docker build -t desafio-dbt:dev .` (o `Dockerfile` copia `dbt-config/.dbt/`). Alternativas em [`dbt-config/README.md`](dbt-config/README.md).
+
+Configure o profile `desafio_rmi_ds` (nome igual ao `dbt_project.yml`) com **valores literais** em `~/.dbt/profiles.yml`, em `profiles.yml.example` (cópia) ou em `dbt-config/.dbt/profiles.yml` (copiado para a imagem Docker). Inclui `config.partial_parse`, `target` `dev` e output `prod` (schema `desafio_rmi_ds_prod`), no espírito do **passo 2.2** do [guia prático (Alice Thomaz)](https://medium.com/@alice_thomaz/guia-pr%C3%A1tico-do-dbt-desvendando-a-arquitetura-e-configura%C3%A7%C3%A3o-inicial-d7315d21ad34). **Antes do `docker build`**, se o Postgres estiver no host e o dbt rodar dentro do contêiner, altere `host` para `host.docker.internal` (Mac/Windows Docker Desktop) ou o hostname correto. Ajuste `vars.raw_schema` / sources em `models/staging/_sources.yml` se o schema bruto tiver outro nome.
+
+**Dados brutos no Postgres:** com os Parquets em `data/` (ex.: `gsutil` a partir de `gs://case_vagas/rmi/`), crie as tabelas no schema `raw_educacao` (ou o valor de `RAW_SCHEMA`) com o carregador:
+
+```bash
+export POSTGRES_HOST=... POSTGRES_USER=... POSTGRES_PASSWORD=... POSTGRES_DB=...
+# opcional: RAW_SCHEMA=raw_educacao  DATA_DIR=./data
+python scripts/load_raw_educacao.py
+```
+
+O script converte colunas `Binary` (IDs) para texto hex (joins consistentes entre tabelas) e recria as tabelas a cada execução.
 
 **Comandos:**
 

@@ -6,11 +6,13 @@ __pycache__/
 # dbt
 target/
 dbt_packages/
+dbt-config/.dbt/profiles.yml
 logs/
 .user.yml
 /profiles.yml
 
-# Parquets e dados locais (não versionar)
-data/
-data/*.parquet
-data/*.csv
+# Parquets e dados locais (não versionar; manter data/.gitkeep)
+data/*
+!data/.gitkeep
+
+.env
