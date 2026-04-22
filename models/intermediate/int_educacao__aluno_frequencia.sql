@@ -5,10 +5,10 @@
   Ajuste os nomes das chaves (ex.: id_aluno) conforme o esquema real das fontes.
 */
 with frequencia as (
-  select * from {{ ref("stg_educacao__frequencia") }}
+  select * from {{ ref("stg_frequencia") }}
 ),
 aluno as (
-  select * from {{ ref("stg_educacao__aluno") }}
+  select * from {{ ref("stg_aluno") }}
 )
 select
   frequencia.*,

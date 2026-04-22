@@ -6,8 +6,6 @@ sources:
       Fontes brutas educacionais anônimas (desafio RMI): equivalentes aos Parquets em
       gs://case_vagas/rmi/, carregadas no Postgres no schema definido por `vars.raw_schema`
       (padrão `raw_educacao`). IDs sensíveis vêm como texto hex (carga via `scripts/load_raw_educacao.py`).
-    # Postgres: omitir `database` aqui — senão o dbt pode gerar identificador de 3 partes no FROM,
-    # o que costuma falhar no Postgres (o correto é só schema.tabela no mesmo banco da conexão).
     schema: "{{ var('raw_schema') }}"
     tables:
       - name: aluno
