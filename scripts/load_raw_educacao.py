@@ -1,31 +1,21 @@
 #!/usr/bin/env python3
-"""
-Cria o schema bruto e carrega as tabelas aluno, escola, turma, frequencia e avaliacao
-a partir dos Parquets em disco (ex.: baixados de gs://case_vagas/rmi/ para data/).
-
-Requisitos:
-  - Mesmas variáveis de ambiente do dbt (POSTGRES_HOST, POSTGRES_USER, POSTGRES_PASSWORD,
-    POSTGRES_DB, opcional POSTGRES_PORT).
-  - Schema alvo: RAW_SCHEMA (padrão raw_educacao), alinhado a vars.raw_schema no dbt_project.yml.
-  - Arquivos: {DATA_DIR}/aluno, escola, turma, frequencia, avaliacao (Parquet, sem extensão).
-
-Uso:
-  python scripts/load_raw_educacao.py
-  RAW_SCHEMA=outro_schema DATA_DIR=../data python scripts/load_raw_educacao.py
-"""
-
 from __future__ import annotations
 
 import io
 import os
 import sys
 from pathlib import Path
-
 import polars as pl
 import psycopg2
 from psycopg2 import sql
 
-TABLES = ("aluno", "escola", "turma", "frequencia", "avaliacao")
+TABLES = (
+    "aluno",
+    "escola",
+    "turma",
+    "frequencia",
+    "avaliacao",
+)
 
 
 def _load_dotenv(repo_root: Path) -> None:
@@ -58,7 +48,16 @@ def _bimestre_to_int(df: pl.DataFrame, table: str) -> pl.DataFrame:
 
 
 def _pg_type(dtype: pl.DataType) -> str:
-    if dtype in (pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64):
+    if dtype in (
+        pl.Int8,
+        pl.Int16,
+        pl.Int32,
+        pl.Int64,
+        pl.UInt8,
+        pl.UInt16,
+        pl.UInt32,
+        pl.UInt64,
+    ):
         return "BIGINT"
     if dtype in (pl.Float32, pl.Float64):
         return "DOUBLE PRECISION"
@@ -85,8 +84,7 @@ def _connect():
 
 def _write_table(conn, schema: str, table: str, df: pl.DataFrame) -> None:
     col_defs = [
-        (sql.Identifier(c), sql.SQL(_pg_type(df.schema[c])))
-        for c in df.columns
+        (sql.Identifier(c), sql.SQL(_pg_type(df.schema[c]))) for c in df.columns
     ]
     create_stmt = sql.SQL("CREATE TABLE {}.{} ({})").format(
         sql.Identifier(schema),
@@ -98,7 +96,9 @@ def _write_table(conn, schema: str, table: str, df: pl.DataFrame) -> None:
     buf = io.StringIO()
     df.write_csv(buf)
     buf.seek(0)
-    copy_stmt = sql.SQL("COPY {}.{} FROM STDIN WITH (FORMAT csv, HEADER true, NULL '')").format(
+    copy_stmt = sql.SQL(
+        "COPY {}.{} FROM STDIN WITH (FORMAT csv, HEADER true, NULL '')"
+    ).format(
         sql.Identifier(schema),
         sql.Identifier(table),
     )
@@ -118,7 +118,12 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
     _load_dotenv(repo_root)
 
-    for key in ("POSTGRES_HOST", "POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_DB"):
+    for key in (
+        "POSTGRES_HOST",
+        "POSTGRES_USER",
+        "POSTGRES_PASSWORD",
+        "POSTGRES_DB",
+    ):
         if key not in os.environ:
             print(f"Variável de ambiente ausente: {key}", file=sys.stderr)
             return 1
@@ -139,7 +144,9 @@ def main() -> int:
     try:
         with conn.cursor() as cur:
             cur.execute(
-                sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(sql.Identifier(raw_schema))
+                sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(
+                    sql.Identifier(raw_schema)
+                )
             )
         conn.commit()
 
