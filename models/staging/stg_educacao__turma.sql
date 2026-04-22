@@ -1,4 +1,4 @@
 {{ config(materialized="view", tags=["staging", "educacao"]) }}
 
 select *
-from {{ source("educacao_raw", "turma") }}
+from {{ source("raw_educacao", "turma") }}
