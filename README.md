@@ -96,7 +96,7 @@ dbt docs generate && dbt docs serve
 
 ---
 
-## 7. Docker — imagem com dbt (opcional)
+## 7. Docker — imagem com dbt
 
 **Build** (na raiz do repositório):
 
@@ -127,7 +127,7 @@ Alternativa de build: `docker build -f dbt-config/Dockerfile -t desafio-dbt:dev 
 
 ---
 
-## 8. Onde ficam as coisas no Postgres
+## 8. Postgres (Estrutura)
 
 | O quê | Onde |
 |--------|--------|
@@ -137,7 +137,25 @@ Alternativa de build: `docker build -f dbt-config/Dockerfile -t desafio-dbt:dev 
 
 ---
 
-## 9. Estrutura útil do repositório
+## 9. Resultado dos testes (staging) e padronização
+
+### O que foi padronizado na camada staging
+
+- **Tipos explícitos** nos `stg_*`: conversões com `::text`, `::int`, `::date`, `::float` (conforme o model), alinhando a tipagem às descrições em `models/staging/schema.yml`.
+- **Nomes de colunas legíveis** em `stg_avaliacao`: a fonte `disciplina_1`…`disciplina_4` expõe-se como `lingua_portuguesa`, `ciencias`, `ingles`, `matematica`.
+
+### Inconsistências encontradas nos dados
+
+Na exploração da base carregada, registaram-se as seguintes situações em **`stg_aluno`** (refletem a fonte `aluno` após o mesmo pipeline de staging):
+
+- **`id_turma`:** nem todos os alunos têm turma associada.
+- **`bairro`:** nem todos os alunos têm bairro associado.
+
+Até estas lacunas serem tratadas na fonte, em intermediate/marts ou relaxando testes, os testes `not_null` em `id_turma` e `bairro` podem **falhar** com a carga atual.
+
+---
+
+## 10. Estrutura útil do repositório
 
 ```
 models/staging/     # stg_* + _sources.yml
@@ -151,7 +169,7 @@ dbt_project.yml
 
 ---
 
-## 10. Pacotes dbt
+## 11. Pacotes dbt
 
 Se usar `packages.yml`: `dbt deps` antes de `dbt run`.
 
