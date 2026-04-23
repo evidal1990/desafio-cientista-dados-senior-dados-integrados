@@ -128,7 +128,7 @@ def main() -> int:
             print(f"Variável de ambiente ausente: {key}", file=sys.stderr)
             return 1
 
-    raw_schema = os.environ.get("RAW_SCHEMA", "raw_educacao")
+    educacao_raw_schema = os.environ.get("EDUCACAO_RAW_SCHEMA", "educacao_raw")
     data_dir = Path(os.environ.get("DATA_DIR", repo_root / "data")).resolve()
 
     missing = [t for t in TABLES if not (data_dir / t).is_file()]
@@ -145,7 +145,7 @@ def main() -> int:
         with conn.cursor() as cur:
             cur.execute(
                 sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(
-                    sql.Identifier(raw_schema)
+                    sql.Identifier(educacao_raw_schema)
                 )
             )
         conn.commit()
@@ -155,8 +155,8 @@ def main() -> int:
             df = pl.read_parquet(path)
             df = _binary_to_hex_utf8(df)
             df = _bimestre_to_int(df, name)
-            _write_table(conn, raw_schema, name, df)
-            print(f"OK  {raw_schema}.{name}  ({len(df):,} linhas)")
+            _write_table(conn, educacao_raw_schema, name, df)
+            print(f"OK  {educacao_raw_schema}.{name}  ({len(df):,} linhas)")
     finally:
         conn.close()
 

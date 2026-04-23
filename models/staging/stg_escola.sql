@@ -1,4 +1,6 @@
-{{ config(tags=["staging", "educacao"]) }}
+{{ config(tags=["staging", "educacao_raw"]) }}
 
-select *
-from {{ source("raw_educacao", "escola") }}
+select 
+  id_escola::int,
+  bairro::int
+from {{ source("educacao_raw", "escola") }}

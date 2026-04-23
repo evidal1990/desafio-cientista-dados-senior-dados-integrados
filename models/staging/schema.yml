@@ -7,15 +7,24 @@ models:
       - name: id_aluno
         description: "Identificador único do aluno na base de dados."
         data_type: STRING
+        tests:
+          - not_null
+          - unique
       - name: id_turma
         description: "Identificador único da turma (Hash com salt aplicado sobre o id_turma original)."
         data_type: INT64
+        tests:
+          - not_null
       - name: faixa_etaria
         description: "Faixa etária do aluno agrupada para evitar reidentificação (ex: 0-5, 6-10, 11-14, 15-17, 18+). Derivada da coluna idade_atual."
         data_type: STRING
+        tests:
+          - not_null
       - name: bairro
         description: "Hash do bairro de residência do aluno (aplicado sobre o campo bairro original)."
         data_type: INT64
+        tests:
+          - not_null
 
   - name: stg_escola
     description: "Cadastro de unidades escolares pertencentes à rede municipal, com identificadores e localização anonimizados via hashing."
@@ -23,9 +32,14 @@ models:
       - name: id_escola
         description: "Identificador único da unidade escolar na base de dados (Hash com salt aplicado sobre o id_escola original)."
         data_type: INT64
+        tests:
+          - not_null
+          - unique
       - name: bairro
         description: "Hash do bairro onde a unidade escolar está localizada (aplicado sobre o campo bairro original)."
         data_type: INT64
+        tests:
+          - not_null
 
   - name: stg_turma
     description: "Relacionamento entre alunos e turmas para o ano letivo, com dados de tempo anonimizados."
@@ -33,37 +47,69 @@ models:
       - name: ano
         description: "Ano letivo da turma, anonimizado de forma determinística para o valor 2000."
         data_type: INT64
+        tests:
+          - not_null
+          - dbt_utils.accepted_range: 
+              min_value: 2000
+              max_value: 2000
       - name: id_turma
         description: "Identificador único da turma na base de dados (Hash com salt aplicado sobre o id_turma original)."
         data_type: INT64
+        tests:
+          - not_null
       - name: id_aluno
         description: "Identificador único do aluno associado à turma."
         data_type: STRING
+        tests:
+          - not_null
+          - unique
 
   - name: stg_frequencia
     description: "Registros de frequência escolar por disciplina e período, com mapeamento consistente de IDs de alunos e anonimização de datas."
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "data_inicio::date between date '2000-01-01' and date '2000-12-31'"
+      - dbt_utils.expression_is_true:
+          expression: "data_fim::date between date '2000-01-01' and date '2000-12-31'"
     columns:
       - name: id_escola
         description: "Identificador único da unidade escolar (Hash com salt)."
         data_type: INT64
+        tests:
+          - not_null
       - name: id_aluno
         description: "Identificador único do aluno, mapeado para garantir consistência com a tabela stg_aluno."
         data_type: STRING
+        tests:
+          - not_null
       - name: id_turma
         description: "Identificador único da turma (Hash com salt)."
         data_type: INT64
+        tests:
+          - not_null
       - name: data_inicio
         description: "Data de início do período de apuração da frequência (Ano anonimizado para 2000)."
-        data_type: STRING
+        data_type: DATE
+        tests:
+          - not_null
       - name: data_fim
         description: "Data de fim do período de apuração da frequência (Ano anonimizado para 2000)."
-        data_type: STRING
+        data_type: DATE
+        tests:
+          - not_null
       - name: disciplina
         description: "Nome da disciplina mapeado para identificadores genéricos (disciplina_1: Português, disciplina_2: Ciências, disciplina_3: Inglês, disciplina_4: Matemática)."
         data_type: STRING
+        tests:
+          - not_null
       - name: frequencia
         description: "Percentual de frequência calculado como 100 - (faltas_disciplina / dias_letivos)."
         data_type: FLOAT64
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 100.0
 
   - name: stg_avaliacao
     description: "Notas e avaliações dos alunos por bimestre e disciplina. Os valores originais (0.0 a 10.0) receberam um ruído determinístico (jitter +/- 0.2) para anonimização."
@@ -71,24 +117,58 @@ models:
       - name: id_aluno
         description: "Identificador único do aluno na base de dados."
         data_type: STRING
+        tests:
+          - not_null
       - name: id_turma
         description: "Identificador único da turma (Hash com salt)."
         data_type: INT64
+        tests:
+          - not_null
       - name: frequencia
         description: "Percentual de frequência geral do aluno no bimestre (campo original da tabela de avaliação)."
         data_type: FLOAT64
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 100.0
       - name: bimestre
         description: "Identificador do bimestre (id_coc), variando de 1 a 4."
         data_type: INT64
-      - name: disciplina_1
-        description: "Nota em Língua Portuguesa com aplicação de jitter aleatório."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 4
+      - name: lingua_portuguesa
+        description: "Nota em Língua Portuguesa (fonte: disciplina_1), com jitter aleatório."
         data_type: FLOAT64
-      - name: disciplina_2
-        description: "Nota em Ciências com aplicação de jitter aleatório."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 10.0
+      - name: ciencias
+        description: "Nota em Ciências (fonte: disciplina_2), com jitter aleatório."
         data_type: FLOAT64
-      - name: disciplina_3
-        description: "Nota em Língua Estrangeira (Inglês) com aplicação de jitter aleatório."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 10.0
+      - name: ingles
+        description: "Nota em Língua Estrangeira / Inglês (fonte: disciplina_3), com jitter aleatório."
         data_type: FLOAT64
-      - name: disciplina_4
-        description: "Nota em Matemática com aplicação de jitter aleatório."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 10.0
+      - name: matematica
+        description: "Nota em Matemática (fonte: disciplina_4), com jitter aleatório."
         data_type: FLOAT64
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 10.0
