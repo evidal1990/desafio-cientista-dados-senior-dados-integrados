@@ -1,11 +1,14 @@
 {{ config(tags=["staging", "educacao_raw"]) }}
 
-select 
-  id_escola::int,
-  id_aluno::text,
-  id_turma::int,
-  data_inicio::date,
-  data_fim::date,
-  disciplina::text,
-  frequencia::float
-from {{ source("educacao_raw", "frequencia") }}
+with source as (
+    select * from {{ source("educacao_raw", "frequencia") }}
+)
+select
+    id_escola::int,
+    trim(lower(id_aluno::text)) as id_aluno,
+    id_turma::int,
+    data_inicio::date,
+    data_fim::date,
+    trim(lower(disciplina::text)) as disciplina,
+    frequencia::float
+from source

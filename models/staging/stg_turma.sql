@@ -1,7 +1,10 @@
 {{ config(tags=["staging", "educacao_raw"]) }}
 
-select 
-  ano::int,
-  id_turma::int,
-  id_aluno::text
-from {{ source("educacao_raw", "turma") }}
+with source as (
+    select * from {{ source("educacao_raw", "turma") }}
+)
+select
+    ano::int,
+    id_turma::int,
+    trim(lower(id_aluno::text)) as id_aluno
+from source
