@@ -5,7 +5,7 @@ with source as (
 )
 select
     trim(lower(id_aluno::text)) as id_aluno,
-    id_turma::int,
+    id_turma::bigint,
     frequencia::float,
     bimestre::int,
     disciplina_1::float as lingua_portuguesa,

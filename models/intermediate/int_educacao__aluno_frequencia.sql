@@ -1,18 +1,26 @@
-{{ config(materialized="ephemeral", tags=["intermediate", "educacao"]) }}
+{{ config(materialized="ephemeral", tags=["intermediate", "educacao_raw"]) }}
 
-/*
-  Une frequência ao cadastro de aluno para métricas de presença/absenteísmo.
-  Ajuste os nomes das chaves (ex.: id_aluno) conforme o esquema real das fontes.
-*/
 with frequencia as (
   select * from {{ ref("stg_frequencia") }}
 ),
 aluno as (
   select * from {{ ref("stg_aluno") }}
+),
+avaliacao as (
+  select * from {{ ref("stg_avaliacao") }}
 )
 select
-  frequencia.*,
-  aluno.id_aluno as _fk_aluno_resolvido
+  aluno.id_aluno,
+  avaliacao.bimestre,
+  frequencia.disciplina,
+  frequencia.frequencia,
+  avaliacao.lingua_portuguesa,
+  avaliacao.ciencias,
+  avaliacao.ingles,
+  avaliacao.matematica
 from frequencia
 left join aluno
   on frequencia.id_aluno = aluno.id_aluno
+left join avaliacao
+  on frequencia.id_aluno = avaliacao.id_aluno
+group by all

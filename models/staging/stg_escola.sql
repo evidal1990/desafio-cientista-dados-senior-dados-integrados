@@ -4,6 +4,6 @@ with source as (
     select * from {{ source("educacao_raw", "escola") }}
 )
 select
-    id_escola::int,
-    bairro::int
+    trim(lower(id_escola::text)) as id_escola,
+    bairro::bigint as bairro
 from source

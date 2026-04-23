@@ -5,7 +5,7 @@ with source as (
 )
 select
     trim(lower(id_aluno::text)) as id_aluno,
-    id_turma::int,
+    id_turma::bigint,
     trim(lower(faixa_etaria::text)) as faixa_etaria,
-    bairro::int
+    bairro::bigint
 from source

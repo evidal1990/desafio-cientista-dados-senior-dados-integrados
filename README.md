@@ -141,7 +141,7 @@ Alternativa de build: `docker build -f dbt-config/Dockerfile -t desafio-dbt:dev 
 
 ### O que foi padronizado na camada staging
 
-- **Tipos explícitos** nos `stg_*`: conversões com `::text`, `::int`, `::date`, `::float` (conforme o model), alinhando a tipagem às descrições em `models/staging/schema.yml`.
+- **Tipos explícitos** nos `stg_*`: conversões com `::text`, `::bigint`, `::date`, `::float` (conforme o model), alinhando a tipagem às descrições em `models/staging/schema.yml`.
 - **Nomes de colunas legíveis** em `stg_avaliacao`: a fonte `disciplina_1`…`disciplina_4` expõe-se como `lingua_portuguesa`, `ciencias`, `ingles`, `matematica`.
 
 ### Inconsistências encontradas nos dados
@@ -150,6 +150,22 @@ Na exploração da base carregada, registaram-se as seguintes situações em **`
 
 - **`id_turma`:** nem todos os alunos têm turma associada.
 - **`bairro`:** nem todos os alunos têm bairro associado.
+- **68** linhas não distintas
+
+Na exploração da base carregada, registaram-se as seguintes situações em **`stg_frequencia`** (refletem a fonte `frequencia` após o mesmo pipeline de staging):
+
+- **1469** linhas não distintas
+
+Até estas lacunas serem tratadas na fonte, em intermediate/marts ou relaxando testes, os testes `not_null` em `id_turma` e `bairro` podem **falhar** com a carga atual.
+
+Na exploração da base carregada, registaram-se as seguintes situações em **`stg_avaliacao`** (refletem a fonte `avaliacao` após o mesmo pipeline de staging):
+
+- **`ciencias`:** nem todos os alunos têm nota de ciencias associada (35931 dados nulos).
+- **`ingles`:** nem todos os alunos têm nota de ingles associada (221687 dados nulos).
+- **`matematica`:** nem todos os alunos têm nota de matematica associada (35462 dados nulos).
+- **`lingua_portuguesa`:** nem todos os alunos têm nota de lingua_portuguesa associada (34609 dados nulos).
+- **`frequencia`:** nem todos os alunos têm frequencia associada (1734 dados nulos).
+- **34** linhas não distintas
 
 Até estas lacunas serem tratadas na fonte, em intermediate/marts ou relaxando testes, os testes `not_null` em `id_turma` e `bairro` podem **falhar** com a carga atual.
 

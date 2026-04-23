@@ -5,6 +5,6 @@ with source as (
 )
 select
     ano::int,
-    id_turma::int,
+    id_turma::bigint,
     trim(lower(id_aluno::text)) as id_aluno
 from source
