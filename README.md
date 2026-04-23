@@ -142,7 +142,7 @@ Alternativa de build: `docker build -f dbt-config/Dockerfile -t desafio-dbt:dev 
 ### O que foi padronizado na camada staging
 
 - **Tipos explícitos** nos `stg_*`: conversões com `::text`, `::bigint`, `::date`, `::float` (conforme o model), alinhando a tipagem às descrições em `models/staging/schema.yml`.
-- **Nomes de colunas legíveis** em `stg_avaliacao`: a fonte `disciplina_1`…`disciplina_4` expõe-se como `lingua_portuguesa`, `ciencias`, `ingles`, `matematica`.
+- **Nomes de colunas legíveis** em `stg_avaliacao`: as disciplinas `disciplina_1`…`disciplina_4` passam a se chamar `lingua_portuguesa`, `ciencias`, `ingles`, `matematica`.
 
 ### Inconsistências encontradas nos dados
 
