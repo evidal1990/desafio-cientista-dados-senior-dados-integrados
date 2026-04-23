@@ -3,8 +3,37 @@ version: 2
 models:
   - name: int_educacao__aluno_frequencia
     description: >
-      Camada intermediária que combina frequência com aluno (left join).
-      Documente premissas: chave de join, tratamento de órfãos e filtros temporais.
+      Combina stg_frequencia com stg_aluno e stg_turma (matrícula na mesma turma).
+      Cada linha é um período de apuração por disciplina; frequencia arredondada a 2 casas;
+      taxa_presenca (0–1) e flag de alerta para frequência abaixo de 75%.
     columns:
-      - name: _fk_aluno_resolvido
-        description: Referência ao aluno após o join (ajuste se renomear colunas no staging).
+      - name: id_aluno
+        description: "Aluno (chave de join com cadastro e matrícula)."
+        data_type: STRING
+      - name: id_turma
+        description: "Turma da linha de frequência; cruzada com stg_turma quando há matrícula."
+        data_type: INT64
+      - name: id_escola
+        description: "Unidade escolar da observação de frequência."
+        data_type: INT64
+      - name: data_inicio
+        description: "Início do período de apuração na fonte de frequência."
+        data_type: DATE
+      - name: data_fim
+        description: "Fim do período de apuração na fonte de frequência."
+        data_type: DATE
+      - name: disciplina
+        description: "Disciplina padronizada (rótulos lingua_portuguesa, ciencias, etc.)."
+        data_type: STRING
+      - name: frequencia
+        description: "Percentual 0–100 (numeric, 2 casas decimais)."
+        data_type: FLOAT64
+      - name: bairro
+        description: "Hash de bairro do aluno (stg_aluno), se join existir."
+        data_type: INT64
+      - name: taxa_presenca
+        description: "frequencia / 100 (0–1), 4 casas decimais."
+        data_type: FLOAT64
+      - name: flag_frequencia_abaixo_75pct
+        description: "1 se frequencia < 75%, caso contrário 0 (regra de exemplo para alerta)."
+        data_type: INT64

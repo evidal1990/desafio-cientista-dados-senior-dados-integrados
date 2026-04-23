@@ -1,26 +1,29 @@
 {{ config(materialized="ephemeral", tags=["intermediate", "educacao_raw"]) }}
 
 with frequencia as (
-  select * from {{ ref("stg_frequencia") }}
+    select * from {{ ref("stg_frequencia") }}
 ),
 aluno as (
-  select * from {{ ref("stg_aluno") }}
+    select * from {{ ref("stg_aluno") }}
 ),
-avaliacao as (
-  select * from {{ ref("stg_avaliacao") }}
+matricula as (
+    select * from {{ ref("stg_turma") }}
 )
 select
-  aluno.id_aluno,
-  avaliacao.bimestre,
-  frequencia.disciplina,
-  frequencia.frequencia,
-  avaliacao.lingua_portuguesa,
-  avaliacao.ciencias,
-  avaliacao.ingles,
-  avaliacao.matematica
-from frequencia
-left join aluno
-  on frequencia.id_aluno = aluno.id_aluno
-left join avaliacao
-  on frequencia.id_aluno = avaliacao.id_aluno
-group by all
+    f.id_aluno,
+    f.id_turma,
+    f.id_escola,
+    f.data_inicio,
+    f.data_fim,
+    f.disciplina,
+    round(f.frequencia::numeric, 2) as frequencia,
+    case
+        when f.frequencia < 75.0 then 1
+        else 0
+    end as flag_frequencia_abaixo_75pct
+from frequencia as f
+left join aluno as a
+    on f.id_aluno = a.id_aluno
+left join matricula as m
+    on f.id_aluno = m.id_aluno
+    and f.id_turma = m.id_turma
