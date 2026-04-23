@@ -67,9 +67,8 @@ models:
         data_type: INT64
         tests:
           - not_null
-          - dbt_utils.accepted_range: 
-              min_value: 2000
-              max_value: 2000
+          - dbt_utils.accepted_values: 
+              values: [2000]
       - name: id_turma
         description: "Identificador único da turma na base de dados (Hash com salt aplicado sobre o id_turma original)."
         data_type: INT64
@@ -81,6 +80,9 @@ models:
         tests:
           - not_null
           - unique
+          - relationships:
+              to: ref("stg_aluno")
+              field: id_aluno
 
   - name: stg_frequencia
     description: "Registros de frequência escolar por disciplina e período, com mapeamento consistente de IDs de alunos e anonimização de datas."
@@ -104,16 +106,25 @@ models:
         data_type: INT64
         tests:
           - not_null
+          - relationships:
+              to: ref("stg_escola")
+              field: id_escola
       - name: id_aluno
         description: "Identificador único do aluno, mapeado para garantir consistência com a tabela stg_aluno."
         data_type: STRING
         tests:
           - not_null
+          - relationships:
+              to: ref("stg_aluno")
+              field: id_aluno
       - name: id_turma
-        description: "Identificador único da turma (Hash com salt)."
+        description: "Turma (hash). Regra de negócio assumida no dbt: todo id_turma em frequência deve aparecer em stg_turma (matrícula). Falhas do teste relationships indicam inconsistência entre tabelas brutas ou recorte de carga — tratar na origem ou enriquecer stg_turma, em vez de desligar o teste."
         data_type: INT64
         tests:
           - not_null
+          - relationships:
+              to: ref("stg_turma")
+              field: id_turma
       - name: data_inicio
         description: "Data de início do período de apuração da frequência (Ano anonimizado para 2000)."
         data_type: DATE
@@ -125,10 +136,12 @@ models:
         tests:
           - not_null
       - name: disciplina
-        description: "Nome da disciplina mapeado para identificadores genéricos (disciplina_1: Português, disciplina_2: Ciências, disciplina_3: Inglês, disciplina_4: Matemática)."
+        description: "Nome da disciplina mapeado como 'lingua_portuguesa', 'ciencias', 'ingles', 'matematica'."
         data_type: STRING
         tests:
           - not_null
+          - accepted_values:
+              values: ["lingua_portuguesa", "ciencias", "ingles", "matematica"]
       - name: frequencia
         description: "Percentual de frequência calculado como 100 - (faltas_disciplina / dias_letivos)."
         data_type: FLOAT64
@@ -152,11 +165,17 @@ models:
         data_type: STRING
         tests:
           - not_null
+          - relationships:
+              to: ref("stg_aluno")
+              field: id_aluno
       - name: id_turma
         description: "Identificador único da turma (Hash com salt)."
         data_type: INT64
         tests:
           - not_null
+          - relationships:
+              to: ref("stg_turma")
+              field: id_turma
       - name: frequencia
         description: "Percentual de frequência geral do aluno no bimestre (campo original da tabela de avaliação)."
         data_type: FLOAT64

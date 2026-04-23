@@ -1,19 +1,19 @@
 {{ config(tags=["staging", "educacao_raw"]) }}
 
-with source as (
+with raw as (
     select * from {{ source("educacao_raw", "frequencia") }}
 )
 select
-    trim(lower(id_escola::text)) as id_escola,
+    id_escola::bigint,
     trim(lower(id_aluno::text)) as id_aluno,
     id_turma::bigint,
     data_inicio::date,
     data_fim::date,
-    case when disciplina = 'disciplina_1' then 'lingua_portuguesa'
-         when disciplina = 'disciplina_2' then 'ciencias'
-         when disciplina = 'disciplina_3' then 'ingles'
-         when disciplina = 'disciplina_4' then 'matematica'
-         else null
+    case trim(lower(disciplina::text))
+        when 'disciplina_1' then 'lingua_portuguesa'
+        when 'disciplina_2' then 'ciencias'
+        when 'disciplina_3' then 'ingles'
+        when 'disciplina_4' then 'matematica'
     end as disciplina,
-    frequencia::float
-from source
+    frequencia::double precision
+from raw

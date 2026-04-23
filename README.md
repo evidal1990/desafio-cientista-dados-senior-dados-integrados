@@ -155,6 +155,7 @@ Na exploração da base carregada, registaram-se as seguintes situações em **`
 Na exploração da base carregada, registaram-se as seguintes situações em **`stg_frequencia`** (refletem a fonte `frequencia` após o mesmo pipeline de staging):
 
 - **1469** linhas não distintas
+- **id_turma:** com 338536 registros que não estão associados a um id_turma de **`stg_turma`**
 
 Até estas lacunas serem tratadas na fonte, em intermediate/marts ou relaxando testes, os testes `not_null` em `id_turma` e `bairro` podem **falhar** com a carga atual.
 
@@ -166,6 +167,7 @@ Na exploração da base carregada, registaram-se as seguintes situações em **`
 - **`lingua_portuguesa`:** nem todos os alunos têm nota de lingua_portuguesa associada (34609 dados nulos).
 - **`frequencia`:** nem todos os alunos têm frequencia associada (1734 dados nulos).
 - **34** linhas não distintas
+- **id_turma:** com 184 registros que não estão associados a um id_turma de **`stg_turma`**
 
 Até estas lacunas serem tratadas na fonte, em intermediate/marts ou relaxando testes, os testes `not_null` em `id_turma` e `bairro` podem **falhar** com a carga atual.
 
