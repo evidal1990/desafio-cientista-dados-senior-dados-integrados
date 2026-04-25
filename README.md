@@ -157,8 +157,6 @@ Na exploração da base carregada, registaram-se as seguintes situações em **`
 - **1469** linhas não distintas
 - **id_turma:** com 338536 registros que não estão associados a um id_turma de **`stg_turma`**
 
-Até estas lacunas serem tratadas na fonte, em intermediate/marts ou relaxando testes, os testes `not_null` em `id_turma` e `bairro` podem **falhar** com a carga atual.
-
 Na exploração da base carregada, registaram-se as seguintes situações em **`stg_avaliacao`** (refletem a fonte `avaliacao` após o mesmo pipeline de staging):
 
 - **`ciencias`:** nem todos os alunos têm nota de ciencias associada (35931 dados nulos).
@@ -168,8 +166,6 @@ Na exploração da base carregada, registaram-se as seguintes situações em **`
 - **`frequencia`:** nem todos os alunos têm frequencia associada (1734 dados nulos).
 - **34** linhas não distintas
 - **id_turma:** com 184 registros que não estão associados a um id_turma de **`stg_turma`**
-
-Até estas lacunas serem tratadas na fonte, em intermediate/marts ou relaxando testes, os testes `not_null` em `id_turma` e `bairro` podem **falhar** com a carga atual.
 
 ---
 

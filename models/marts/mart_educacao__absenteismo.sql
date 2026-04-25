@@ -1,4 +1,4 @@
-{{ config(materialized="table", tags=["marts", "educacao"]) }}
+{{ config(materialized="table", tags=["marts", "educacao_raw"]) }}
 
 /*
   Mart de absenteísmo — substitua a agregação placeholder pela métrica de negócio
@@ -6,4 +6,4 @@
 */
 select
   count(*) as total_observacoes_frequencia_aluno
-from {{ ref("int_educacao__aluno_frequencia") }}
+from {{ ref("int_media_disciplina_por_aluno") }}
