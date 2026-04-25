@@ -1,5 +1,13 @@
 {{ config(materialized="ephemeral", tags=["intermediate", "educacao_raw"]) }}
 
+/*
+  Cálculo de médias das notas nas linhas de avaliação distintas que passam nos filtros de nulidade.
+  A disciplina ingles não é considerada, pois só possui dados nulos.
+  **Grão:** uma linha por `(id_aluno, id_turma, faixa_etaria)`.
+  **Joins:** `inner join` em aluno e turma na chave composta `(id_aluno, id_turma)`.
+  **Regra de aprovação:** média aritmética por disciplina (lingua portuguesa, matemática e ciências). Se >= 5.0 o aluno está aprovado. Senão, reprovado.
+*/
+
 with avaliacao_sem_duplicados as (
     select distinct
         id_aluno,

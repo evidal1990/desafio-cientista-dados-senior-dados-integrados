@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: int_media_disciplina_por_aluno_periodo
+  - name: int_media_disciplina_por_aluno
     description: >
       **Views:** `stg_avaliacao`, `stg_aluno`, `stg_turma`.
       Cálculo de médias das notas nas linhas de avaliação distintas que passam nos filtros de nulidade.

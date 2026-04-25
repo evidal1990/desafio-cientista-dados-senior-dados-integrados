@@ -1,9 +1,24 @@
 version: 2
 
 models:
-  - name: mart_educacao__absenteismo
+  - name: mart_resultado_por_aluno
     description: >
-      Fatos agregados para análise de absenteísmo (granularidade e métricas a definir no SQL).
+      Agrega int_media_disciplina_por_aluno por faixa etária: total de linhas (aluno × turma)
+      e percentuais (0–100) de aprovados/reprovados por disciplina.
     columns:
-      - name: total_observacoes_frequencia_aluno
-        description: Contagem placeholder até definir KPIs de absenteísmo.
+      - name: faixa_etaria
+        description: Faixa etária do agrupamento.
+      - name: total_alunos
+        description: Quantidade de linhas (aluno × turma) na faixa.
+      - name: pct_alunos_aprovados_lingua_portuguesa
+        description: Percentual aprovados em língua portuguesa na faixa.
+      - name: pct_alunos_reprovados_lingua_portuguesa
+        description: Percentual reprovados em língua portuguesa na faixa.
+      - name: pct_alunos_aprovados_matematica
+        description: Percentual aprovados em matemática na faixa.
+      - name: pct_alunos_reprovados_matematica
+        description: Percentual reprovados em matemática na faixa.
+      - name: pct_alunos_aprovados_ciencias
+        description: Percentual aprovados em ciências na faixa.
+      - name: pct_alunos_reprovados_ciencias
+        description: Percentual reprovados em ciências na faixa.
