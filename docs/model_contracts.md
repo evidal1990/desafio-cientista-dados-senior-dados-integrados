@@ -3,7 +3,7 @@
 Contratos **declarativos** (principalmente `models/staging/schema.yml` e `models/marts/schema.yml`) e grãos lógicos inferidos dos SQL em `models/staging/*.sql` e `models/marts/*.sql`.  
 Tipos físicos no Postgres seguem os casts dos `stg_*` (ex.: `bigint`, `double precision`, `text`, `date`).
 
-**Documentação por teste:** README §10 — tabelas *Coluna / Teste / Por quê* para **marts** (`models/marts/schema.yml`) e para **staging** (`models/staging/schema.yml`); os YAML mantêm só a declaração dos testes.
+**Documentação por teste:** README §12 (testes nas marts e no staging) — tabelas *Coluna / Teste / Por quê* para **marts** (`models/marts/schema.yml`) e para **staging** (`models/staging/schema.yml`); os YAML mantêm só a declaração dos testes. Testes genéricos (schema): §11; testes singulares `tests/`: §13.
 
 Legenda:
 

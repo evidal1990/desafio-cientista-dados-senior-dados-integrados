@@ -79,7 +79,7 @@ O script usa `**RAW_SCHEMA**` (padrão `**raw**`), alinhado a `vars.raw_schema` 
 - **Nome do profile:** `desafio_rmi_ds` (igual a `profile:` no `dbt_project.yml`).
 - Copie `dbt-config/.dbt/profiles.yml` para `~/.dbt/profiles.yml` **ou** use `profiles.yml.example` como modelo.
 - Ajuste **host**, **password** e **dbname** se necessário. O ficheiro no repo usa **valores literais** (sem `env_var`).
-- `**schema` no profile (dev):** usado para models **sem** `+schema` literal na macro (ver `generate_schema_name.sql`). Os `stg_*` usam `**+schema: staging`** e, em dev, o schema físico é só `**staging`** (não `{{ target.schema }}_staging`). Pode ser diferente de `vars.raw_schema` (tabelas brutas). Em `**--target prod`** use outro `target.schema` (ex.: `desafio_rmi_ds_prod`).
+- `**schema` no profile (dev):** usado para models **sem** `+schema` literal na macro (ver `generate_schema_name.sql`). Os `stg_`* usam `**+schema: staging`** e, em dev, o schema físico é só `**staging`** (não `{{ target.schema }}_staging`). Pode ser diferente de `vars.raw_schema` (tabelas brutas). Em `**--target prod`** use outro `target.schema` (ex.: `desafio_rmi_ds_prod`).
 
 ---
 
@@ -134,8 +134,8 @@ Alternativa de build: `docker build -f dbt-config/Dockerfile -t desafio-dbt:dev 
 | O quê                         | Onde                                                                                        |
 | ----------------------------- | ------------------------------------------------------------------------------------------- |
 | Tabelas brutas (carga Python) | schema `**vars.raw_schema`** (padrão `**raw`**; ver `dbt_project.yml`)                      |
-| Views `**stg_*`** (dev)       | schema físico `**staging**` (`+schema: staging`; macro dev não prefixa com `target.schema`) |
-| Tabelas `**mart_***`          | schema físico `**marts**` (separado do schema dos dados brutos)                             |
+| Views `**stg_*`** (dev)       | schema físico `**staging`** (`+schema: staging`; macro dev não prefixa com `target.schema`) |
+| Tabelas `**mart_*`**          | schema físico `**marts`** (separado do schema dos dados brutos)                             |
 | **Intermediate** `ephemeral`  | sem tabela/view no Postgres (SQL inlinado nos downstream)                                   |
 | **prod**                      | `stg_*` em `**{target.schema}_staging`**; `**mart_*`** no schema `**marts**`                |
 
@@ -244,54 +244,66 @@ Ambos os marts agregam **só** `int_media_disciplina_por_aluno` (notas + cadastr
 
 **Materializar antes de testar:** `dbt build --select mart_resultado_por_faixa_etaria mart_resultado_por_bairro` (ou `dbt run` nesses models e depois `dbt test`).
 
+---
+
+## 11. Testes genéricos
+
+São os testes declarados **por coluna** nos `schema.yml` do dbt (`models/staging/schema.yml`, `models/marts/schema.yml`): `not_null`, `unique`, `relationships`, `accepted_values`, `accepted_range`, expressões (`expression_is_true`), combinações únicas, etc. Correm com `dbt test` e falham quando os dados violam o contrato (órfãos, duplicados, fora de domínio). Funcionam como rede de qualidade: apanham-nos cedo o que quebra integridade ou o que faria relatórios e KPIs mentirosos, sem escreveres um `SELECT` de auditoria para cada regra.
+
+## 12. Testes nas marts e no staging
+
 ### Testes nas marts
 
 Justificativas dos testes em `models/marts/schema.yml` (texto apenas neste README).
 
 #### `mart_resultado_por_faixa_etaria`
 
-| Coluna | Teste | Por quê |
-|--------|-------|---------|
-| `faixa_etaria` | `not_null` | Chave de partição da mart; sem valor não há cohort identificável. |
-| `faixa_etaria` | `unique` | Uma linha por faixa; duplicata duplica KPIs. |
-| `faixa_etaria` | `accepted_values` | Só categorias estáveis alinhadas a `stg_aluno`. |
-| `faixa_etaria` | `relationships` → `stg_aluno` | Cada faixa publicada existe no cadastro; verificação por inclusão (sem fan-out). |
-| `total_alunos` | `not_null` | Denominador dos `pct_*`. |
-| `total_alunos` | `accepted_range` (≥ 0) | Contagem não negativa; zero = grupo vazio (coerente com `nullif` no SQL). |
-| `pct_alunos_aprovados_lingua_portuguesa` | `not_null` | Indicador obrigatório; null esconde falha na agregação. |
-| `pct_alunos_aprovados_lingua_portuguesa` | `accepted_range` [0, 100] | Domínio de percentagem. |
-| `pct_alunos_reprovados_lingua_portuguesa` | `not_null` | Par com aprovados; regra binária no upstream implica soma 100%. |
-| `pct_alunos_reprovados_lingua_portuguesa` | `accepted_range` [0, 100] | Domínio de percentagem. |
-| `pct_alunos_aprovados_matematica` | `not_null` | Idem disciplina núcleo. |
-| `pct_alunos_aprovados_matematica` | `accepted_range` [0, 100] | Domínio de percentagem. |
-| `pct_alunos_reprovados_matematica` | `not_null` | Idem par aprov/reprov. |
-| `pct_alunos_reprovados_matematica` | `accepted_range` [0, 100] | Domínio de percentagem. |
-| `pct_alunos_aprovados_ciencias` | `not_null` | Idem disciplina núcleo. |
-| `pct_alunos_aprovados_ciencias` | `accepted_range` [0, 100] | Domínio de percentagem. |
-| `pct_alunos_reprovados_ciencias` | `not_null` | Idem par aprov/reprov. |
-| `pct_alunos_reprovados_ciencias` | `accepted_range` [0, 100] | Domínio de percentagem. |
+
+| Coluna                                    | Teste                         | Por quê                                                                              |
+| ----------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------ |
+| `faixa_etaria`                            | `not_null`                    | PK lógica da mart.                                                                   |
+| `faixa_etaria`                            | `unique`                      | Uma linha por faixa, onde duplicata duplica KPIs.                                    |
+| `faixa_etaria`                            | `accepted_values`             | Somente valores coerentes com os esperados em `stg_aluno`.                           |
+| `faixa_etaria`                            | `relationships` → `stg_aluno` | Cada faixa publicada existe no cadastro; verificação por inclusão                    |
+| `total_alunos`                            | `not_null`                    | Denominador dos `pct_`*.                                                             |
+| `total_alunos`                            | `accepted_range` (≥ 0)        | Total de alunos não pode ser negativo.                                               |
+| `pct_alunos_aprovados_lingua_portuguesa`  | `not_null`                    | O percentual de aprovados precisa somar 100% ao somar com o percentual e reprovados. |
+| `pct_alunos_aprovados_lingua_portuguesa`  | `accepted_range` [0, 100]     | O percentual não pode ser negativo nem, utrapassar 100%.                             |
+| `pct_alunos_reprovados_lingua_portuguesa` | `not_null`                    | Par com aprovados; regra binária no upstream implica soma 100%.                      |
+| `pct_alunos_reprovados_lingua_portuguesa` | `accepted_range` [0, 100]     | O percentual não pode ser negativo nem, utrapassar 100%.                             |
+| `pct_alunos_aprovados_matematica`         | `not_null`                    | O percentual de aprovados precisa somar 100% ao somar com o percentual e reprovados. |
+| `pct_alunos_aprovados_matematica`         | `accepted_range` [0, 100]     | O percentual não pode ser negativo nem, utrapassar 100%.                             |
+| `pct_alunos_reprovados_matematica`        | `not_null`                    | O percentual de reprovados precisa somar 100% ao somar com o percentual e aprovados. |
+| `pct_alunos_reprovados_matematica`        | `accepted_range` [0, 100]     | O percentual não pode ser negativo nem, utrapassar 100%.                             |
+| `pct_alunos_aprovados_ciencias`           | `not_null`                    | O percentual de aprovados precisa somar 100% ao somar com o percentual e reprovados. |
+| `pct_alunos_aprovados_ciencias`           | `accepted_range` [0, 100]     | O percentual não pode ser negativo nem, utrapassar 100%.                             |
+| `pct_alunos_reprovados_ciencias`          | `not_null`                    | O percentual de reprovados precisa somar 100% ao somar com o percentual e aprovados. |
+| `pct_alunos_reprovados_ciencias`          | `accepted_range` [0, 100]     | O percentual não pode ser negativo nem, utrapassar 100%.                             |
+
 
 #### `mart_resultado_por_bairro`
 
-| Coluna | Teste | Por quê |
-|--------|-------|---------|
-| `bairro` | `not_null` | PK lógica da mart. |
-| `bairro` | `unique` | Um conjunto de KPIs por bairro. |
-| `bairro` | `relationships` → `stg_aluno` | Linhagem do hash no aluno; não `stg_escola` para não exigir o mesmo conjunto de bairros. |
-| `total_alunos` | `not_null` | Denominador dos `pct_*`. |
-| `total_alunos` | `accepted_range` (≥ 1) | Bairro na mart implica ≥ 1 linha aluno×turma no pipeline. |
-| `pct_alunos_aprovados_lingua_portuguesa` | `not_null` | Indicador obrigatório. |
-| `pct_alunos_aprovados_lingua_portuguesa` | `accepted_range` [0, 100] | Domínio de percentagem. |
-| `pct_alunos_reprovados_lingua_portuguesa` | `not_null` | Par com aprovados LP. |
-| `pct_alunos_reprovados_lingua_portuguesa` | `accepted_range` [0, 100] | Domínio de percentagem. |
-| `pct_alunos_aprovados_matematica` | `not_null` | Disciplina núcleo. |
-| `pct_alunos_aprovados_matematica` | `accepted_range` [0, 100] | Domínio de percentagem. |
-| `pct_alunos_reprovados_matematica` | `not_null` | Par aprov/reprov. |
-| `pct_alunos_reprovados_matematica` | `accepted_range` [0, 100] | Domínio de percentagem. |
-| `pct_alunos_aprovados_ciencias` | `not_null` | Disciplina núcleo. |
-| `pct_alunos_aprovados_ciencias` | `accepted_range` [0, 100] | Domínio de percentagem. |
-| `pct_alunos_reprovados_ciencias` | `not_null` | Par aprov/reprov. |
-| `pct_alunos_reprovados_ciencias` | `accepted_range` [0, 100] | Domínio de percentagem. |
+
+| Coluna                                    | Teste                         | Por quê                                                                              |
+| ----------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------ |
+| `bairro`                                  | `not_null`                    | PK lógica da mart.                                                                   |
+| `bairro`                                  | `unique`                      | Uma linha por faixa, onde duplicata duplica KPIs.                                    |
+| `bairro`                                  | `relationships` → `stg_aluno` | O bairro deve ser condizente com o bairro do aluno.                                  |
+| `total_alunos`                            | `not_null`                    | Total de alunos não pode ser negativo.                                               |
+| `total_alunos`                            | `accepted_range` (≥ 1)        | Bairro na mart implica ≥ 1 linha aluno×turma no pipeline.                            |
+| `pct_alunos_aprovados_lingua_portuguesa`  | `not_null`                    | O percentual de aprovados precisa somar 100% ao somar com o percentual e reprovados. |
+| `pct_alunos_aprovados_lingua_portuguesa`  | `accepted_range` [0, 100]     | O percentual não pode ser negativo nem, utrapassar 100%.                             |
+| `pct_alunos_reprovados_lingua_portuguesa` | `not_null`                    | O percentual de aprovados precisa somar 100% ao somar com o percentual e reprovados. |
+| `pct_alunos_reprovados_lingua_portuguesa` | `accepted_range` [0, 100]     | O percentual não pode ser negativo nem, utrapassar 100%.                             |
+| `pct_alunos_aprovados_matematica`         | `not_null`                    | O percentual de aprovados precisa somar 100% ao somar com o percentual e reprovados. |
+| `pct_alunos_aprovados_matematica`         | `accepted_range` [0, 100]     | O percentual não pode ser negativo nem, utrapassar 100%.                             |
+| `pct_alunos_reprovados_matematica`        | `not_null`                    | O percentual de aprovados precisa somar 100% ao somar com o percentual e reprovados. |
+| `pct_alunos_reprovados_matematica`        | `accepted_range` [0, 100]     | O percentual não pode ser negativo nem, utrapassar 100%.                             |
+| `pct_alunos_aprovados_ciencias`           | `not_null`                    | O percentual de aprovados precisa somar 100% ao somar com o percentual e reprovados. |
+| `pct_alunos_aprovados_ciencias`           | `accepted_range` [0, 100]     | O percentual não pode ser negativo nem, utrapassar 100%.                             |
+| `pct_alunos_reprovados_ciencias`          | `not_null`                    | O percentual de aprovados precisa somar 100% ao somar com o percentual e reprovados. |
+| `pct_alunos_reprovados_ciencias`          | `accepted_range` [0, 100]     | O percentual não pode ser negativo nem, utrapassar 100%.                             |
+
 
 ### Testes no staging
 
@@ -299,81 +311,103 @@ Mesmo formato (**Coluna / Teste / Por quê**); declarações em `models/staging/
 
 #### `stg_aluno`
 
-| Coluna | Teste | Por quê |
-|--------|-------|---------|
-| *(modelo)* | `unique_combination_of_columns` (`id_aluno`, `id_turma`, `faixa_etaria`, `bairro`) | Garante grão estável da carga transformada; duplicata quebra joins e contagens. |
-| `id_aluno` | `not_null` | Identificador mínimo para qualquer vínculo a turma ou notas. |
-| `id_aluno` | `unique` | Um registo por aluno no cadastro (grão do `stg_aluno`). |
-| `id_turma` | `not_null` | Turma obrigatória para alinhar com `stg_turma` e `stg_avaliacao`. |
-| `faixa_etaria` | `not_null` | Usada em marts e `int_media_*`; null impede agregação por faixa. |
-| `faixa_etaria` | `accepted_values` | Evita literais fora do conjunto de negócio / privacidade. |
-| `bairro` | `not_null` (com limiares) | Sinaliza volume de ausência de bairro; a pipeline analítica pode filtrar `bairro` não nulo — útil para monitorizar qualidade da fonte. |
+
+| Coluna         | Teste                                                                              | Por quê                                                                                                                                |
+| -------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| *(modelo)*     | `unique_combination_of_columns` (`id_aluno`, `id_turma`, `faixa_etaria`, `bairro`) | Garante grão estável da carga transformada; duplicata quebra joins e contagens.                                                        |
+| `id_aluno`     | `not_null`                                                                         | Identificador mínimo para qualquer vínculo a turma ou notas.                                                                           |
+| `id_aluno`     | `unique`                                                                           | Um registo por aluno no cadastro (grão do `stg_aluno`).                                                                                |
+| `id_turma`     | `not_null`                                                                         | Turma obrigatória para alinhar com `stg_turma` e `stg_avaliacao`.                                                                      |
+| `faixa_etaria` | `not_null`                                                                         | Usada em marts e `int_media_`*; null impede agregação por faixa.                                                                       |
+| `faixa_etaria` | `accepted_values`                                                                  | Evita literais fora do conjunto de negócio / privacidade.                                                                              |
+| `bairro`       | `not_null` (com limiares)                                                          | Sinaliza volume de ausência de bairro; a pipeline analítica pode filtrar `bairro` não nulo — útil para monitorizar qualidade da fonte. |
+
 
 #### `stg_escola`
 
-| Coluna | Teste | Por quê |
-|--------|-------|---------|
-| *(modelo)* | `unique_combination_of_columns` (`id_escola`, `bairro`) | Grão da escola + hash de localização sem duplicar unidades. |
-| `id_escola` | `not_null` | Chave para `stg_frequencia.id_escola`. |
-| `id_escola` | `unique` | Uma linha por escola. |
-| `bairro` | `not_null` | Completa o grão testado na combinação; necessário para joins de frequência à escola. |
-| `bairro` | `unique` | Contrato da carga actual (um bairro por linha de escola neste extract); violação indica colisão ou erro de hash. |
+
+| Coluna      | Teste                                                   | Por quê                                                                                                          |
+| ----------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| *(modelo)*  | `unique_combination_of_columns` (`id_escola`, `bairro`) | Grão da escola + hash de localização sem duplicar unidades.                                                      |
+| `id_escola` | `not_null`                                              | Chave para `stg_frequencia.id_escola`.                                                                           |
+| `id_escola` | `unique`                                                | Uma linha por escola.                                                                                            |
+| `bairro`    | `not_null`                                              | Completa o grão testado na combinação; necessário para joins de frequência à escola.                             |
+| `bairro`    | `unique`                                                | Contrato da carga actual (um bairro por linha de escola neste extract); violação indica colisão ou erro de hash. |
+
 
 #### `stg_turma`
 
-| Coluna | Teste | Por quê |
-|--------|-------|---------|
+
+| Coluna     | Teste                                                           | Por quê                                                          |
+| ---------- | --------------------------------------------------------------- | ---------------------------------------------------------------- |
 | *(modelo)* | `unique_combination_of_columns` (`ano`, `id_turma`, `id_aluno`) | Um víncio aluno×turma×ano por linha; duplicata inflaciona joins. |
-| `ano` | `not_null` | Ano anonimizado deve estar presente. |
-| `ano` | `accepted_values` [2000] | Garante anonimização determinística esperada pelo projeto. |
-| `id_turma` | `not_null` | Chave com `id_aluno` para avaliação e frequência. |
-| `id_aluno` | `not_null` | Aluno da matrícula tem de existir. |
-| `id_aluno` | `unique` | Um víncio turma por aluno neste model (regra do extract). |
-| `id_aluno` | `relationships` → `stg_aluno` | Matrícula só para alunos cadastrados; evita órfãos. |
+| `ano`      | `not_null`                                                      | Ano anonimizado deve estar presente.                             |
+| `ano`      | `accepted_values` [2000]                                        | Garante anonimização determinística esperada pelo projeto.       |
+| `id_turma` | `not_null`                                                      | Chave com `id_aluno` para avaliação e frequência.                |
+| `id_aluno` | `not_null`                                                      | Aluno da matrícula tem de existir.                               |
+| `id_aluno` | `unique`                                                        | Um víncio turma por aluno neste model (regra do extract).        |
+| `id_aluno` | `relationships` → `stg_aluno`                                   | Matrícula só para alunos cadastrados; evita órfãos.              |
+
 
 #### `stg_frequencia`
 
-| Coluna | Teste | Por quê |
-|--------|-------|---------|
-| *(modelo)* | `expression_is_true` (`data_inicio` em 2000) | Valida que as datas estão de de acordo com o ano aninimizado |
-| *(modelo)* | `expression_is_true` (`data_fim` em 2000) | Valida que as datas estão de de acordo com o ano aninimizado |
-| *(modelo)* | `unique_combination_of_columns` Evita duplicar o mesmo registo de frequência. |
-| `id_escola` | `not_null` | O id da escola deve ser preenchido, pois é uma FK |
-| `id_escola` | `relationships` → `stg_escola` | Sem id deescola não é possível cruzar os dados com a tabela escola |
-| `id_aluno` | `not_null` | O id do aluno deve ser preenchido, pois é uma FK |
-| `id_aluno` | `relationships` → `stg_aluno` | Sem id de aluno não é possível cruzar os dados com a tabela aluno |
-| `id_turma` | `not_null` | O id da turma deve ser preenchido, pois é uma FK |
-| `id_turma` | `relationships` → `stg_turma` | Sem id de turma não é possível cruzar os dados com a tabela turma |
-| `data_inicio` | `not_null` | Início do período é obrigatório. |
-| `data_fim` | `not_null` | Fim do período é obrigatório. |
-| `disciplina` | `not_null` | A frequência precisa ser associada a uma disciplina |
-| `disciplina` | `accepted_values` | Evita valores não mapeados |
-| `frequencia` | `not_null` | Percentual obrigatório no contrato de staging. |
-| `frequencia` | `accepted_range` [0, 100] | Evita valores não mapeados e inválidos |
+
+| Coluna        | Teste                                                                         | Por quê                                                            |
+| ------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| *(modelo)*    | `expression_is_true` (`data_inicio` em 2000)                                  | Valida que as datas estão de de acordo com o ano aninimizado       |
+| *(modelo)*    | `expression_is_true` (`data_fim` em 2000)                                     | Valida que as datas estão de de acordo com o ano aninimizado       |
+| *(modelo)*    | `unique_combination_of_columns` Evita duplicar o mesmo registo de frequência. |                                                                    |
+| `id_escola`   | `not_null`                                                                    | O id da escola deve ser preenchido, pois é uma FK                  |
+| `id_escola`   | `relationships` → `stg_escola`                                                | Sem id deescola não é possível cruzar os dados com a tabela escola |
+| `id_aluno`    | `not_null`                                                                    | O id do aluno deve ser preenchido, pois é uma FK                   |
+| `id_aluno`    | `relationships` → `stg_aluno`                                                 | Sem id de aluno não é possível cruzar os dados com a tabela aluno  |
+| `id_turma`    | `not_null`                                                                    | O id da turma deve ser preenchido, pois é uma FK                   |
+| `id_turma`    | `relationships` → `stg_turma`                                                 | Sem id de turma não é possível cruzar os dados com a tabela turma  |
+| `data_inicio` | `not_null`                                                                    | Início do período é obrigatório.                                   |
+| `data_fim`    | `not_null`                                                                    | Fim do período é obrigatório.                                      |
+| `disciplina`  | `not_null`                                                                    | A frequência precisa ser associada a uma disciplina                |
+| `disciplina`  | `accepted_values`                                                             | Evita valores não mapeados                                         |
+| `frequencia`  | `not_null`                                                                    | Percentual obrigatório no contrato de staging.                     |
+| `frequencia`  | `accepted_range` [0, 100]                                                     | Evita valores não mapeados e inválidos                             |
+
 
 #### `stg_avaliacao`
 
-| Coluna | Teste | Por quê |
-|--------|-------|---------|
-| *(modelo)* | `unique_combination_of_columns` (`id_aluno`, `id_turma`, `bimestre`) | Um registo por aluno×turma×bimestre; duplicata distorce médias no `int_media_*`. |
-| `id_aluno` | `not_null` | Chave de join com aluno e turma. |
-| `id_aluno` | `relationships` → `stg_aluno` | Avaliação só deve existir para alunos matriculados. |
-| `id_turma` | `not_null` | Chave de join com turma. |
-| `id_turma` | `relationships` → `stg_turma` | Avaliação só deve existir para turmas registradas. |
-| `frequencia` | `not_null` | Campo presente no contrato de notas por bimestre. |
-| `frequencia` | `accepted_range` [0, 100] | Evita valores não mapeados e inválidos |
-| `bimestre` | `not_null` | Partição temporal do modelo. |
-| `bimestre` | `accepted_range` [1, 4] | Domínio de bimestres escolares. |
-| `lingua_portuguesa` | `accepted_range` [0, 10] | Evita valores não mapeados e inválidos |
-| `ciencias` | `accepted_range` [0, 10] | Evita valores não mapeados e inválidos |
-| `ingles` | `accepted_range` [0, 10] | Evita valores não mapeados e inválidos |
-| `matematica` | `accepted_range` [0, 10] | Evita valores não mapeados e inválidos |
+
+| Coluna              | Teste                                                                | Por quê                                                                          |
+| ------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| *(modelo)*          | `unique_combination_of_columns` (`id_aluno`, `id_turma`, `bimestre`) | Um registo por aluno×turma×bimestre; duplicata distorce médias no `int_media_`*. |
+| `id_aluno`          | `not_null`                                                           | Chave de join com aluno e turma.                                                 |
+| `id_aluno`          | `relationships` → `stg_aluno`                                        | Avaliação só deve existir para alunos matriculados.                              |
+| `id_turma`          | `not_null`                                                           | Chave de join com turma.                                                         |
+| `id_turma`          | `relationships` → `stg_turma`                                        | Avaliação só deve existir para turmas registradas.                               |
+| `frequencia`        | `not_null`                                                           | Campo presente no contrato de notas por bimestre.                                |
+| `frequencia`        | `accepted_range` [0, 100]                                            | Evita valores não mapeados e inválidos                                           |
+| `bimestre`          | `not_null`                                                           | Partição temporal do modelo.                                                     |
+| `bimestre`          | `accepted_range` [1, 4]                                              | Domínio de bimestres escolares.                                                  |
+| `lingua_portuguesa` | `accepted_range` [0, 10]                                             | Evita valores não mapeados e inválidos                                           |
+| `ciencias`          | `accepted_range` [0, 10]                                             | Evita valores não mapeados e inválidos                                           |
+| `ingles`            | `accepted_range` [0, 10]                                             | Evita valores não mapeados e inválidos                                           |
+| `matematica`        | `accepted_range` [0, 10]                                             | Evita valores não mapeados e inválidos                                           |
+
 
 ---
 
-## 11. Estrutura útil do repositório
+## 13. Testes singulares (`tests/`)
 
-Inventário de **PKs, FKs, enums e campos obrigatórios** por model (`stg_*`, `mart_*`): [`docs/model_contracts.md`](docs/model_contracts.md).
+Ficheiros SQL na pasta `tests/` que o dbt trata como testes de **“falha se devolver linhas”**. Em geral: `dbt run --select` nos `stg_`* que o SQL referencia, depois `dbt test --select path:tests`.
+
+`**assert_data_inicio_data_fim.sql`** — Cada janela de frequência tem de ter **fim depois do início**. Quebra com `(data_inicio, data_fim)` distintos em que `data_fim` não é maior que `data_inicio`. Importa porque período inválido não sustenta métricas por intervalo nem presença.
+
+`**assert_data_inicio_por_mes.sql`** — Lista global ordenada de `data_inicio` distintas (com `data_fim` para desempate); onde existe “próxima” linha, o próximo início tem de ser **estritamente maior** que o actual. Quebra se o calendário de períodos publicados repete ou retrocede. Útil como sanity check temporal; não é por turma — é ordem nos distintos.
+
+`**assert_datas_coerentes_ano_turma.sql`** — Cruza frequência com turma e exige que o **ano civil** de `data_inicio` e `data_fim` coincida com o `**ano` da turma**. Quebra quando há desalinhamento. Importa para cruzar cadastro de turma com apuração; no extract actual o ano vem anonimizado (2000), mas o teste **amarra** as duas fontes.
+
+---
+
+## 14. Estrutura útil do repositório
+
+Inventário de **PKs, FKs, enums e campos obrigatórios** por model (`stg_`*, `mart_`*): `[docs/model_contracts.md](docs/model_contracts.md)`.
 
 ```
 models/staging/     # stg_* + _sources.yml
@@ -388,7 +422,7 @@ dbt_project.yml
 
 ---
 
-## 12. Pacotes dbt
+## 15. Pacotes dbt
 
 Se usar `packages.yml`: `dbt deps` antes de `dbt run`.
 
