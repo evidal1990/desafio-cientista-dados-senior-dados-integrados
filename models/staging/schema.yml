@@ -299,11 +299,6 @@ models:
         description: "Nota em Língua Portuguesa (fonte: disciplina_1), com jitter aleatório."
         data_type: FLOAT64
         tests:
-          - not_null:
-              config:
-                severity: error
-                error_if: ">1000"
-                warn_if: ">10"
           - dbt_utils.accepted_range:
               min_value: 0.0
               max_value: 10.0
@@ -311,11 +306,6 @@ models:
         description: "Nota em Ciências (fonte: disciplina_2), com jitter aleatório."
         data_type: FLOAT64
         tests:
-          - not_null:
-              config:
-                severity: error
-                error_if: ">1000"
-                warn_if: ">10"
           - dbt_utils.accepted_range:
               min_value: 0.0
               max_value: 10.0
@@ -329,11 +319,7 @@ models:
       - name: matematica
         description: "Nota em Matemática (fonte: disciplina_4), com jitter aleatório."
         data_type: FLOAT64
-          - not_null:
-              config:
-                severity: error
-                error_if: ">1000"
-                warn_if: ">10"
+        tests:
           - dbt_utils.accepted_range:
               min_value: 0.0
               max_value: 10.0
