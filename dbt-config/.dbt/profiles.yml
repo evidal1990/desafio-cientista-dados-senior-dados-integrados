@@ -1,0 +1,25 @@
+config:
+  partial_parse: false
+
+desafio_rmi_ds:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: localhost
+      user: postgres
+      password: postgres
+      port: 5432
+      dbname: desafio_rmi_ds
+      schema: raw
+      threads: 4
+
+    prod:
+      type: postgres
+      host: localhost
+      user: postgres
+      password: postgres
+      port: 5432
+      dbname: desafio_rmi_ds
+      schema: desafio_rmi_ds_prod
+      threads: 4
