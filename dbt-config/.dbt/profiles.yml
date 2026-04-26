@@ -1,6 +1,3 @@
-config:
-  partial_parse: false
-
 desafio_rmi_ds:
   target: dev
   outputs:

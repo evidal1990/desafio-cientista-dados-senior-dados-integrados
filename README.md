@@ -7,44 +7,60 @@ Projeto **dbt Core + Postgres**: staging → intermediate → marts. Dados anoni
 ## Pré-requisitos
 
 - **Git**, **Python 3.10+**, **Docker** (opcional, para Postgres e/ou ambiente dbt).
+- **Windows:** [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) (WSL2 como backend é o cenário mais comum), **PowerShell 7+** ou **Git Bash** para comandos semelhantes ao bash; no **Prompt de Comando** (`cmd.exe`) os exemplos abaixo usam sintaxe `cmd` onde difere.
 - Conta Google com acesso ao bucket **público** `gs://case_vagas/rmi/` (ou copiar os ficheiros por outro meio).
 
 ---
 
 ## 1. Clonar e ambiente Python
 
+**macOS / Linux (bash)**
+
 ```bash
 git clone <URL_DO_SEU_REPO> && cd <PASTA_DO_REPO>
-python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
+
+**Windows (PowerShell, na pasta do repositório)**
+
+```powershell
+cd <PASTA_DO_REPO>
+py -3.12 -m venv .venv   # ou: python -m venv .venv  (use a mesma versão 3.10+ que o projeto)
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+Se `Activate.ps1` for bloqueado por política de execução, numa consola **PowerShell** (uma vez): `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`. Alternativa: **Prompt de Comando** → `cd` para a pasta do repo e `.\.venv\Scripts\activate.bat`.
+
+_Não foi possível validar estes passos numa VM Windows daqui; seguem convenções oficiais da Microsoft/Google/Docker. Se algo falhar no teu PC, indica a versão do Windows e o terminal (PowerShell 5 vs 7, cmd, Git Bash)._
 
 ---
 
 ## 2. Postgres (Docker)
 
-Na máquina host (porta **5432** livre):
+Na máquina host (porta **5432** livre). O mesmo comando funciona em **macOS, Linux e Windows** com Docker Desktop:
 
 ```bash
-docker run -d --name postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=desafio_rmi_ds \
-  -p 5432:5432 \
-  postgres:16
+docker run -d --name postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=desafio_rmi_ds -p 5432:5432 postgres:16
 ```
 
-- **pgAdmin / dbt no host:** Host `localhost`, porta `5432`, base `desafio_rmi_ds`, utilizador `postgres`, palavra-passe `postgres` (ajuste se mudar o `-e`).
+- **pgAdmin / dbt no host:** host `localhost`, porta `5432`, base `desafio_rmi_ds`, utilizador `postgres`, palavra-passe `postgres` (ajuste se mudar o `-e`).
+- **Windows:** com Docker Desktop + WSL2, `localhost:5432` no Windows costuma chegar ao Postgres no contêiner; se não ligar, consulte a documentação do Docker Desktop sobre portas e firewall.
 - **Remover:** `docker rm -f postgres` (e `docker rmi postgres:16` só depois de remover o contêiner).
 
 ---
 
-## 3. Descarregar Parquets para `data/`
+## 3. Baixar Parquets para `data/`
 
 Os ficheiros no bucket **não** têm extensão `.parquet` no nome do objeto.
 
+**macOS / Linux (bash)**
+
 ```bash
 mkdir -p data
-# Se o gsutil reclamar de Python 3.13 no Mac:
+# Se o gsutil reclamar de Python 3.13 no Mac (Cloud SDK):
 export CLOUDSDK_PYTHON=/opt/homebrew/bin/python3.12   # ajuste ao seu python3.12
 gsutil -m cp \
   "gs://case_vagas/rmi/aluno" \
@@ -55,49 +71,26 @@ gsutil -m cp \
   data/
 ```
 
+**Windows (PowerShell)** — com [Google Cloud SDK](https://cloud.google.com/sdk/docs/install-sdk#windows) instalado e `gsutil` no `PATH`:
+
+```powershell
+New-Item -ItemType Directory -Force -Path data | Out-Null
+# Se o instalador do Cloud SDK usar um Python incompatível, aponte para um 3.10–3.12:
+# $env:CLOUDSDK_PYTHON = "C:\Python312\python.exe"
+gsutil -m cp `
+  "gs://case_vagas/rmi/aluno" `
+  "gs://case_vagas/rmi/avaliacao" `
+  "gs://case_vagas/rmi/escola" `
+  "gs://case_vagas/rmi/frequencia" `
+  "gs://case_vagas/rmi/turma" `
+  "data/"
+```
+
 (`data/` está no `.gitignore`; não versionar os binários.)
 
 ---
 
-## 4. Criar tabelas brutas no Postgres
-
-O dbt lê **sources** no schema `**raw`** (variável `raw_schema` no `dbt_project.yml`).
-
-```bash
-export POSTGRES_HOST=localhost POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres POSTGRES_DB=desafio_rmi_ds
-# opcional: RAW_SCHEMA=raw  DATA_DIR=./data
-python scripts/load_data.py
-```
-
-Cria o schema se precisar e as tabelas `aluno`, `escola`, `turma`, `frequencia`, `avaliacao`.
-O script usa `**RAW_SCHEMA**` (padrão `**raw**`), alinhado a `vars.raw_schema` no dbt.
-
----
-
-## 5. Perfil dbt (`profiles.yml`)
-
-- **Nome do profile:** `desafio_rmi_ds` (igual a `profile:` no `dbt_project.yml`).
-- Copie `dbt-config/.dbt/profiles.yml` para `~/.dbt/profiles.yml` **ou** use `profiles.yml.example` como modelo.
-- Ajuste **host**, **password** e **dbname** se necessário. O ficheiro no repo usa **valores literais** (sem `env_var`).
-- `**schema` no profile (dev):** usado para models **sem** `+schema` literal na macro (ver `generate_schema_name.sql`). Os `stg_`* usam `**+schema: staging`** e, em dev, o schema físico é só `**staging`** (não `{{ target.schema }}_staging`). Pode ser diferente de `vars.raw_schema` (tabelas brutas). Em `**--target prod`** use outro `target.schema` (ex.: `desafio_rmi_ds_prod`).
-
----
-
-## 6. dbt (na raiz do repo, com `.venv` ativo)
-
-```bash
-dbt debug
-dbt run
-dbt test
-dbt docs generate && dbt docs serve
-```
-
-- **Só staging:** `dbt run --select path:models/staging`
-- `**dbt compile`** não cria objetos no warehouse; só `**dbt run`** / `**dbt build`**.
-
----
-
-## 7. Docker — imagem com dbt
+## 4. Docker — imagem com dbt
 
 **Build** (na raiz do repositório):
 
@@ -105,15 +98,27 @@ dbt docs generate && dbt docs serve
 docker build -t desafio-dbt:dev .
 ```
 
-**Run** (monta o código em `/work`; Postgres no host no Mac/Windows):
+**Run** (monta o código em `/work`; Postgres no **host**):
+
+- **macOS / Windows (Docker Desktop):** em geral **não** precisa de `--add-host`; use `host.docker.internal` no `profiles.yml` dentro do contêiner para falar com o Postgres no host.
 
 ```bash
-docker run -it --rm --name desafio-dbt-dev \
-  -v "$PWD:/work" -w /work \
-  desafio-dbt:dev bash
+docker run -it --rm --name desafio-dbt-dev -v "$PWD:/work" -w /work desafio-dbt:dev bash
 ```
 
-Dentro do contêiner: `cd /work`, ajuste `host` no `/root/.dbt/profiles.yml` para `**host.docker.internal**` se o Postgres correr no **host**. No **Docker em Linux**:
+**Windows (PowerShell)** — montar a pasta actual:
+
+```powershell
+docker run -it --rm --name desafio-dbt-dev -v "${PWD}:/work" -w /work desafio-dbt:dev bash
+```
+
+**Windows (cmd.exe)**
+
+```bat
+docker run -it --rm --name desafio-dbt-dev -v "%cd%:/work" -w /work desafio-dbt:dev bash
+```
+
+**Linux (Docker Engine no host):** costuma fazer falta resolver `host.docker.internal`:
 
 ```bash
 docker run -it --rm --name desafio-dbt-dev \
@@ -122,9 +127,84 @@ docker run -it --rm --name desafio-dbt-dev \
   desafio-dbt:dev bash
 ```
 
-Alternativa de build: `docker build -f dbt-config/Dockerfile -t desafio-dbt:dev dbt-config` — ver `[dbt-config/README.md](dbt-config/README.md)`.
+Dentro do contêiner: `cd /work` e, se o Postgres estiver no host, `host` em `profiles.yml` → `host.docker.internal`.
+
+Alternativa de build: `docker build -f dbt-config/Dockerfile -t desafio-dbt:dev dbt-config` — ver [`dbt-config/README.md`](dbt-config/README.md).
 
 **Remover imagem/contêiner dbt:** `docker rm -f desafio-dbt-dev` → `docker rmi desafio-dbt:dev`.
+
+---
+
+## 5. Criar tabelas brutas no Postgres
+
+O dbt lê **sources** no schema **`raw`** (variável `raw_schema` no `dbt_project.yml`).
+
+**macOS / Linux (bash)**
+
+```bash
+export POSTGRES_HOST=localhost POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres POSTGRES_DB=desafio_rmi_ds
+# opcional: RAW_SCHEMA=raw DATA_DIR=./data
+python scripts/load_data.py
+```
+
+**Windows (PowerShell)** — com o `.venv` activo:
+
+```powershell
+$env:POSTGRES_HOST = "localhost"
+$env:POSTGRES_USER = "postgres"
+$env:POSTGRES_PASSWORD = "postgres"
+$env:POSTGRES_DB = "desafio_rmi_ds"
+# opcional: $env:RAW_SCHEMA = "raw"; $env:DATA_DIR = ".\data"
+python scripts/load_data.py
+```
+
+**Windows (cmd.exe)**
+
+```bat
+set POSTGRES_HOST=localhost
+set POSTGRES_USER=postgres
+set POSTGRES_PASSWORD=postgres
+set POSTGRES_DB=desafio_rmi_ds
+python scripts\load_data.py
+```
+
+Cria o schema se precisar e as tabelas `aluno`, `escola`, `turma`, `frequencia`, `avaliacao`. O script usa **`RAW_SCHEMA`** (padrão **`raw`**), alinhado a `vars.raw_schema` no dbt.
+
+---
+
+## 6. Perfil dbt (`profiles.yml`)
+
+- **Nome do profile:** `desafio_rmi_ds` (igual a `profile:` no `dbt_project.yml`).
+- **macOS / Linux:** copie `dbt-config/.dbt/profiles.yml` para `~/.dbt/profiles.yml` **ou** use `profiles.yml.example` como modelo.
+- **Windows:** pasta do dbt no utilizador → `%USERPROFILE%\.dbt\` (ex.: `C:\Users\TuNome\.dbt\`). Crie a pasta se não existir e copie o ficheiro, por exemplo no PowerShell: `New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.dbt" | Out-Null` e `Copy-Item -Force "dbt-config\.dbt\profiles.yml" "$env:USERPROFILE\.dbt\profiles.yml"`.
+- Ajuste **host**, **password** e **dbname** se necessário. O ficheiro no repo usa **valores literais** (sem `env_var`).
+- **`schema` no profile (dev):** usado para models **sem** `+schema` literal na macro (ver `generate_schema_name.sql`). Os `stg_*` usam **`+schema: staging`** e, em dev, o schema físico é só **`staging`** (não `{{ target.schema }}_staging`). Pode ser diferente de `vars.raw_schema` (tabelas brutas). Em **`--target prod`** use outro `target.schema` (ex.: `desafio_rmi_ds_prod`).
+
+---
+
+## 7. dbt (na raiz do repo, com `.venv` ativo)
+
+```bash
+dbt deps
+dbt debug
+dbt run
+dbt test
+dbt docs generate && dbt docs serve
+```
+
+**Windows (PowerShell 5.1):** o operador `&&` pode não existir; use duas linhas ou, no PowerShell 7+, `dbt docs generate; if ($?) { dbt docs serve }`.
+
+- **Perfil sem copiar para `~/.dbt` / `%USERPROFILE%\.dbt`:** antes de `dbt`, defina o directório de perfis:
+  - **macOS / Linux:** `export DBT_PROFILES_DIR="$PWD/dbt-config/.dbt"`
+  - **Windows (PowerShell):** `$env:DBT_PROFILES_DIR = (Join-Path $PWD "dbt-config\.dbt")`
+  - **Windows (cmd.exe):** `set DBT_PROFILES_DIR=%cd%\dbt-config\.dbt`
+- **Só staging:** `dbt run --select path:models/staging`
+- **Só intermediate:** `dbt run --select path:models/intermediate`
+- **Só marts:** `dbt run --select path:models/marts`
+- **Só testes singulares em `tests/`:** `dbt test --select path:tests`
+- `dbt compile` não cria objetos no warehouse; só `dbt run` / `dbt build`.
+
+Neste extract público, **`dbt test` pode falhar** em testes de qualidade do staging (`not_null`, `relationships`, `unique`, etc.) por inconsistências já descritas em **§9** — não indica por si só que o ambiente ou os passos 1–6 estão errados. **`dbt run`** deve concluir com sucesso após a carga em **§5**. `dbt docs serve` abre um servidor local (Ctrl+C para sair).
 
 ---
 
@@ -151,18 +231,18 @@ Alternativa de build: `docker build -f dbt-config/Dockerfile -t desafio-dbt:dev 
 
 ### Inconsistências encontradas nos dados
 
-Na exploração da base carregada, registaram-se as seguintes situações em `**stg_aluno`** (refletem a fonte `aluno` após o mesmo pipeline de staging):
+Ao executar os testes em `**stg_aluno`** foram encontradas as seguintes inconsistências (refletem a fonte `aluno` após o mesmo pipeline de staging):
 
 - `**id_turma`:** nem todos os alunos têm turma associada.
 - `**bairro`:** nem todos os alunos têm bairro associado.
 - **68** linhas não distintas
 
-Na exploração da base carregada, registaram-se as seguintes situações em `**stg_frequencia`** (refletem a fonte `frequencia` após o mesmo pipeline de staging):
+Ao executar os testes em `**stg_frequencia`** foram encontradas as seguintes inconsistências (refletem a fonte `frequencia` após o mesmo pipeline de staging):
 
 - **1469** linhas não distintas
 - **id_turma:** com 338536 registros que não estão associados a um id_turma de `**stg_turma`**
 
-Na exploração da base carregada, registaram-se as seguintes situações em `**stg_avaliacao`** (refletem a fonte `avaliacao` após o mesmo pipeline de staging):
+Ao executar os testes em `**stg_avaliacao`** foram encontradas as seguintes inconsistências (refletem a fonte `avaliacao` após o mesmo pipeline de staging):
 
 - `**ciencias`:** nem todos os alunos têm nota de ciencias associada (35931 dados nulos).
 - `**ingles`:** nem todos os alunos têm nota de ingles associada (221687 dados nulos).

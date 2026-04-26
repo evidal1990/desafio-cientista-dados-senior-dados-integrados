@@ -1,8 +1,6 @@
-# Copie para ~/.dbt/profiles.yml ou use DBT_PROFILES_DIR apontando para dbt-config/.dbt
+# Copie para ~/.dbt/profiles.yml (Mac/Linux) ou %USERPROFILE%\.dbt\profiles.yml (Windows),
+# ou use DBT_PROFILES_DIR apontando para dbt-config/.dbt (ver README §6 e §7).
 # Ajuste host, user, password, dbname e schema (valores literais — sem env_var).
-
-config:
-  partial_parse: false
 
 desafio_rmi_ds:
   target: dev
