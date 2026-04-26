@@ -19,6 +19,9 @@ models:
           - unique
           - accepted_values:
               values: ["0-5", "6-10", "11-14", "15-17", "18+"]
+          - relationships:
+              to: ref("stg_aluno")
+              field: faixa_etaria
       - name: total_alunos
         description: Quantidade de linhas (aluno × turma) na faixa.
         tests:
@@ -112,6 +115,9 @@ models:
                 error_if: ">1000"
                 warn_if: ">10"
           - unique
+          - relationships:
+              to: ref("stg_aluno")
+              field: bairro
       - name: total_alunos
         description: Quantidade de linhas (aluno × turma) no bairro.
         tests:

@@ -108,6 +108,8 @@ Legenda:
 | `stg_frequencia` | `id_turma` | `stg_turma.id_turma` |
 | `stg_avaliacao` | `id_aluno` | `stg_aluno.id_aluno` |
 | `stg_avaliacao` | `id_turma` | `stg_turma.id_turma` |
+| `mart_resultado_por_faixa_etaria` | `faixa_etaria` | `stg_aluno.faixa_etaria` (dimensão herdada; sem fan-out) |
+| `mart_resultado_por_bairro` | `bairro` | `stg_aluno.bairro` (proveniência do cadastro de aluno; **não** `stg_escola.bairro`) |
 
 O `int_media_disciplina_por_aluno` (intermediate) assume ainda **inner join** com `stg_aluno` e `stg_turma` em `(id_aluno, id_turma)` e **filtra** `bairro is not null` e notas núcleo não nulas — contrato de **população analítica**, não listado como `stg_*` acima.
 
