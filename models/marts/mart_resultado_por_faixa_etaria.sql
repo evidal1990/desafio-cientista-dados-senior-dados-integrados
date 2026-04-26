@@ -1,8 +1,7 @@
 {{ config(materialized="table", tags=["marts", "educacao_raw"]) }}
 
 /*
-  Percentual de alunos-turma aprovados/reprovados por disciplina e faixa etária (0–100).
-  Postgres: round(exige numeric com 2 argumentos) — evitar ::float no primeiro argumento.
+  Percentual de alunos aprovados e reprovados por disciplina e faixa etária.
 */
 select
     faixa_etaria,
