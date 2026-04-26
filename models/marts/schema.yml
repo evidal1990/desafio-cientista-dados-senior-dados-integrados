@@ -66,9 +66,9 @@ models:
 
   - name: mart_resultado_por_bairro
     description: >
-      Agrega int_media_disciplina_por_aluno por bairro (identificador na fonte). Só inclui
-      bairros com mais de 3 linhas aluno×turma (having). Ver comentário no SQL e secção 10
-      do README.
+      Agrega int_media_disciplina_por_aluno por bairro (identificador na fonte). Ver
+      comentário no SQL e secção 10 do README (inclui análise ilustrativa com números de
+      referência).
 
     columns:
       - name: bairro
@@ -77,11 +77,11 @@ models:
           - not_null
           - unique
       - name: total_alunos
-        description: Quantidade de linhas (aluno × turma) no bairro (sempre > 3 pelo having).
+        description: Quantidade de linhas (aluno × turma) no bairro.
         tests:
           - not_null
           - dbt_utils.accepted_range:
-              min_value: 4.0
+              min_value: 1.0
       - name: pct_alunos_aprovados_lingua_portuguesa
         description: Percentual aprovados em língua portuguesa no bairro.
         tests:

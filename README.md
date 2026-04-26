@@ -61,7 +61,7 @@ gsutil -m cp \
 
 ## 4. Criar tabelas brutas no Postgres
 
-O dbt lê **sources** no schema **`raw`** (variável `raw_schema` no `dbt_project.yml`).
+O dbt lê **sources** no schema `**raw`** (variável `raw_schema` no `dbt_project.yml`).
 
 ```bash
 export POSTGRES_HOST=localhost POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres POSTGRES_DB=desafio_rmi_ds
@@ -70,7 +70,7 @@ python scripts/load_data.py
 ```
 
 Cria o schema se precisar e as tabelas `aluno`, `escola`, `turma`, `frequencia`, `avaliacao`.
-O script usa **`RAW_SCHEMA`** (padrão **`raw`**), alinhado a `vars.raw_schema` no dbt.
+O script usa `**RAW_SCHEMA**` (padrão `**raw**`), alinhado a `vars.raw_schema` no dbt.
 
 ---
 
@@ -79,7 +79,7 @@ O script usa **`RAW_SCHEMA`** (padrão **`raw`**), alinhado a `vars.raw_schema` 
 - **Nome do profile:** `desafio_rmi_ds` (igual a `profile:` no `dbt_project.yml`).
 - Copie `dbt-config/.dbt/profiles.yml` para `~/.dbt/profiles.yml` **ou** use `profiles.yml.example` como modelo.
 - Ajuste **host**, **password** e **dbname** se necessário. O ficheiro no repo usa **valores literais** (sem `env_var`).
-- **`schema` no profile (dev):** usado para models **sem** `+schema` literal na macro (ver `generate_schema_name.sql`). Os `stg_*` usam **`+schema: staging`** e, em dev, o schema físico é só **`staging`** (não `{{ target.schema }}_staging`). Pode ser diferente de `vars.raw_schema` (tabelas brutas). Em **`--target prod`** use outro `target.schema` (ex.: `desafio_rmi_ds_prod`).
+- `**schema` no profile (dev):** usado para models **sem** `+schema` literal na macro (ver `generate_schema_name.sql`). Os `stg_*` usam `**+schema: staging`** e, em dev, o schema físico é só `**staging**` (não `{{ target.schema }}_staging`). Pode ser diferente de `vars.raw_schema` (tabelas brutas). Em `**--target prod**` use outro `target.schema` (ex.: `desafio_rmi_ds_prod`).
 
 ---
 
@@ -93,7 +93,7 @@ dbt docs generate && dbt docs serve
 ```
 
 - **Só staging:** `dbt run --select path:models/staging`
-- **`dbt compile`** não cria objetos no warehouse; só **`dbt run`** / **`dbt build`**.
+- `**dbt compile`** não cria objetos no warehouse; só `**dbt run**` / `**dbt build**`.
 
 ---
 
@@ -113,7 +113,7 @@ docker run -it --rm --name desafio-dbt-dev \
   desafio-dbt:dev bash
 ```
 
-Dentro do contêiner: `cd /work`, ajuste `host` no `/root/.dbt/profiles.yml` para **`host.docker.internal`** se o Postgres correr no **host**. No **Docker em Linux**:
+Dentro do contêiner: `cd /work`, ajuste `host` no `/root/.dbt/profiles.yml` para `**host.docker.internal**` se o Postgres correr no **host**. No **Docker em Linux**:
 
 ```bash
 docker run -it --rm --name desafio-dbt-dev \
@@ -122,7 +122,7 @@ docker run -it --rm --name desafio-dbt-dev \
   desafio-dbt:dev bash
 ```
 
-Alternativa de build: `docker build -f dbt-config/Dockerfile -t desafio-dbt:dev dbt-config` — ver [`dbt-config/README.md`](dbt-config/README.md).
+Alternativa de build: `docker build -f dbt-config/Dockerfile -t desafio-dbt:dev dbt-config` — ver `[dbt-config/README.md](dbt-config/README.md)`.
 
 **Remover imagem/contêiner dbt:** `docker rm -f desafio-dbt-dev` → `docker rmi desafio-dbt:dev`.
 
@@ -130,13 +130,15 @@ Alternativa de build: `docker build -f dbt-config/Dockerfile -t desafio-dbt:dev 
 
 ## 8. Postgres (Estrutura)
 
-| O quê | Onde |
-|--------|--------|
-| Tabelas brutas (carga Python) | schema **`vars.raw_schema`** (padrão **`raw`**; ver `dbt_project.yml`) |
-| Views **`stg_*`** (dev) | schema físico **`staging`** (`+schema: staging`; macro dev não prefixa com `target.schema`) |
-| Tabelas **`mart_*`** | schema físico **`marts`** (separado do schema dos dados brutos) |
-| **Intermediate** `ephemeral` | sem tabela/view no Postgres (SQL inlinado nos downstream) |
-| **prod** | `stg_*` em **`{target.schema}_staging`**; **`mart_*`** no schema **`marts`** |
+
+| O quê                         | Onde                                                                                        |
+| ----------------------------- | ------------------------------------------------------------------------------------------- |
+| Tabelas brutas (carga Python) | schema `**vars.raw_schema`** (padrão `**raw**`; ver `dbt_project.yml`)                      |
+| Views `**stg_***` (dev)       | schema físico `**staging**` (`+schema: staging`; macro dev não prefixa com `target.schema`) |
+| Tabelas `**mart_***`          | schema físico `**marts**` (separado do schema dos dados brutos)                             |
+| **Intermediate** `ephemeral`  | sem tabela/view no Postgres (SQL inlinado nos downstream)                                   |
+| **prod**                      | `stg_*` em `**{target.schema}_staging`**; `**mart_***` no schema `**marts**`                |
+
 
 ---
 
@@ -149,26 +151,26 @@ Alternativa de build: `docker build -f dbt-config/Dockerfile -t desafio-dbt:dev 
 
 ### Inconsistências encontradas nos dados
 
-Na exploração da base carregada, registaram-se as seguintes situações em **`stg_aluno`** (refletem a fonte `aluno` após o mesmo pipeline de staging):
+Na exploração da base carregada, registaram-se as seguintes situações em `**stg_aluno`** (refletem a fonte `aluno` após o mesmo pipeline de staging):
 
-- **`id_turma`:** nem todos os alunos têm turma associada.
-- **`bairro`:** nem todos os alunos têm bairro associado.
+- `**id_turma`:** nem todos os alunos têm turma associada.
+- `**bairro`:** nem todos os alunos têm bairro associado.
 - **68** linhas não distintas
 
-Na exploração da base carregada, registaram-se as seguintes situações em **`stg_frequencia`** (refletem a fonte `frequencia` após o mesmo pipeline de staging):
+Na exploração da base carregada, registaram-se as seguintes situações em `**stg_frequencia`** (refletem a fonte `frequencia` após o mesmo pipeline de staging):
 
 - **1469** linhas não distintas
-- **id_turma:** com 338536 registros que não estão associados a um id_turma de **`stg_turma`**
+- **id_turma:** com 338536 registros que não estão associados a um id_turma de `**stg_turma`**
 
-Na exploração da base carregada, registaram-se as seguintes situações em **`stg_avaliacao`** (refletem a fonte `avaliacao` após o mesmo pipeline de staging):
+Na exploração da base carregada, registaram-se as seguintes situações em `**stg_avaliacao**` (refletem a fonte `avaliacao` após o mesmo pipeline de staging):
 
-- **`ciencias`:** nem todos os alunos têm nota de ciencias associada (35931 dados nulos).
-- **`ingles`:** nem todos os alunos têm nota de ingles associada (221687 dados nulos).
-- **`matematica`:** nem todos os alunos têm nota de matematica associada (35462 dados nulos).
-- **`lingua_portuguesa`:** nem todos os alunos têm nota de lingua_portuguesa associada (34609 dados nulos).
-- **`frequencia`:** nem todos os alunos têm frequencia associada (1734 dados nulos).
+- `**ciencias`:** nem todos os alunos têm nota de ciencias associada (35931 dados nulos).
+- `**ingles`:** nem todos os alunos têm nota de ingles associada (221687 dados nulos).
+- `**matematica`:** nem todos os alunos têm nota de matematica associada (35462 dados nulos).
+- `**lingua_portuguesa`:** nem todos os alunos têm nota de lingua_portuguesa associada (34609 dados nulos).
+- `**frequencia`:** nem todos os alunos têm frequencia associada (1734 dados nulos).
 - **34** linhas não distintas
-- **id_turma:** com 184 registros que não estão associados a um id_turma de **`stg_turma`**
+- **id_turma:** com 184 registros que não estão associados a um id_turma de `**stg_turma`**
 
 ---
 
@@ -176,12 +178,14 @@ Na exploração da base carregada, registaram-se as seguintes situações em **`
 
 ### Definições (percentuais, período, população)
 
-| Tema | Definição usada neste projeto |
-|------|-------------------------------|
+
+| Tema                    | Definição usada neste projeto                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Percentuais (0–100)** | Em cada grupo (`faixa_etaria` ou `bairro`), `pct_*` = contagem de linhas com `resultado_*` = Aprovado ou Reprovado dividida por `total_alunos` do mesmo grupo (`× 100`, arredondado a 2 casas). `total_alunos` é o número de linhas **aluno × turma** em `int_media_disciplina_por_aluno` naquele grupo. **Não** há limiar de **75%** nos modelos: o corte de aprovação é média ≥ **5,0** (escala 0–10) por disciplina no intermediate. |
-| **Período** | **Sem** filtro de datas explícito nos marts ou no `int_media_disciplina_por_aluno`. As médias são calculadas sobre **todas** as linhas de avaliação distintas do extract que passam nos filtros (em geral todos os bimestres presentes na fonte `raw.avaliacao`). |
-| **População incluída** | Alunos presentes em `stg_aluno` **e** `stg_turma` na chave `(id_aluno, id_turma)`, com **`lingua_portuguesa`**, **`matematica`** e **`ciencias`** não nulas em `stg_avaliacao`; **`bairro` não nulo** em `stg_aluno`. Inglês não entra. Cada linha do intermediate = um par aluno×turma com médias e resultados binários por disciplina. |
-| **Mart por bairro** | Igual à população acima, agregada por `bairro`. **`having count(*) > 3`**: bairros com até 3 alunos×turma no grupo **não aparecem** (supressão simples, **não** é um critério de 75%). |
+| **Período**             | **Sem** filtro de datas explícito nos marts ou no `int_media_disciplina_por_aluno`. As médias são calculadas sobre **todas** as linhas de avaliação distintas do extract que passam nos filtros (em geral todos os bimestres presentes na fonte `raw.avaliacao`).                                                                                                                                                                       |
+| **População incluída**  | Alunos presentes em `stg_aluno` **e** `stg_turma` na chave `(id_aluno, id_turma)`, com `**lingua_portuguesa`**, `**matematica**` e `**ciencias**` não nulas em `stg_avaliacao`; `**bairro` não nulo** em `stg_aluno`. Inglês não entra. Cada linha do intermediate = um par aluno×turma com médias e resultados binários por disciplina.                                                                                                |
+| **Mart por bairro**     | Igual à população acima, agregada por `bairro`. O SQL actual **não** aplica `having` extra: todos os bairros presentes no intermediate aparecem na mart.                                                                                                                                                                                                                                                                                |
+
 
 ### O que estes marts **não** medem
 
@@ -191,20 +195,48 @@ Na exploração da base carregada, registaram-se as seguintes situações em **`
 - **Comparação entre anos** ou séries temporais (não há partição por ano no mart).
 - **Inferência** para fora da amostra, intervalos de confiança ou causalidade (ex.: desempenho “por bairro” não implica efeito do bairro).
 
+### Análise - `mart_resultado_por_bairro`
+
+A mart contém **771** bairros; na tabela, os **cinco** com maior `total_alunos` (linhas aluno×turma), por ordem decrescente, e o % de aprovação por disciplina.
+
+| `bairro`             | `total_alunos` | Língua portuguesa (% aprov.) | Matemática (% aprov.) | Ciências (% aprov.) |
+| -------------------: | -------------: | ---------------------------: | --------------------: | --------------------: |
+| -6888326179602323732 |           3038 |                        85,45% |                 76,86% |                77,91% |
+| -1679083123460691310 |           2906 |                        86,72% |                 79,49% |                83,28% |
+| -2784322559717078693 |           2176 |                        75,23% |                 67,37% |                71,83% |
+| 7225990828785393240  |           1922 |                        82,10% |                 75,44% |                78,82% |
+| 20322782284730250    |           1625 |                        84,74% |                 78,28% |                81,85% |
+
+Para reproduzir: `select * from marts.mart_resultado_por_bairro order by total_alunos desc limit 5;` (schema **`marts`** após `dbt run`).
+
+### Análise - `mart_resultado_por_faixa_etaria`
+
+A mart contém **3** faixas etárias presentes no extract (`11-14`, `15-17`, `18+`). Abaixo, `total_alunos` é o número de linhas aluno×turma por faixa (mesmo significado que na mart) e as restantes colunas são os `pct_alunos_aprovados_*`.
+
+| `faixa_etaria` | `total_alunos` | Língua portuguesa (% aprov.) | Matemática (% aprov.) | Ciências (% aprov.)   |
+| -------------: | -------------: | ---------------------------: | --------------------: | --------------------: |
+| 11-14          |           4108 |                        63,49%|                 58,08% |                62,66%|
+| 15-17          |          44301 |                        84,64%|                 74,59% |                80,24%|
+| 18+            |           2414 |                        65,99%|                 63,96% |                65,00%|
+
+Para reproduzir: `select * from marts.mart_resultado_por_faixa_etaria order by faixa_etaria;` (schema **`marts`** após `dbt run`).
+
 ### Dependências em cadeia
 
 Ambos os marts agregam **só** `int_media_disciplina_por_aluno` (notas + cadastro + turma). **Não** usam `stg_frequencia` nem `stg_escola` diretamente.
 
-| Camada | Model | Chaves / colunas usadas |
-|--------|--------|-------------------------|
-| **Mart** | `mart_resultado_por_faixa_etaria` | Lê `int_media_disciplina_por_aluno`; agrupa por **`faixa_etaria`**; percentuais a partir de `resultado_*`. |
-| **Mart** | `mart_resultado_por_bairro` | Lê o mesmo intermediate; agrupa por **`bairro`**; `having count(*) > 3`. |
-| **Intermediate** | `int_media_disciplina_por_aluno` | Grão **`(id_aluno, id_turma, faixa_etaria, bairro)`**; médias de lingua_portuguesa, matemática e ciências; regra ≥ 5,0. |
-| **Staging** | `stg_avaliacao` | **`id_aluno`**, **`id_turma`**; **`lingua_portuguesa`**, **`matematica`**, **`ciencias`** (filtro: as três não nulas). |
-| **Staging** | `stg_aluno` | **`id_aluno`**, **`id_turma`**, **`faixa_etaria`**, **`bairro`** (com `bairro is not null` no intermediate). |
-| **Staging** | `stg_turma` | **`id_aluno`**, **`id_turma`** (inner join com avaliação). |
 
-**Joins no intermediate:** `al.id_aluno = av.id_aluno` e `al.id_turma = av.id_turma`; o mesmo par **`(id_aluno, id_turma)`** para `turma_sem_duplicados`.
+| Camada           | Model                             | Chaves / colunas usadas                                                                                                 |
+| ---------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **Mart**         | `mart_resultado_por_faixa_etaria` | Lê `int_media_disciplina_por_aluno`; agrupa por `**faixa_etaria`**; percentuais a partir de `resultado_*`.              |
+| **Mart**         | `mart_resultado_por_bairro`       | Lê o mesmo intermediate; agrupa por `**bairro`**.                                                                       |
+| **Intermediate** | `int_media_disciplina_por_aluno`  | Grão `**(id_aluno, id_turma, faixa_etaria, bairro)`**; médias de lingua_portuguesa, matemática e ciências; regra ≥ 5,0. |
+| **Staging**      | `stg_avaliacao`                   | `**id_aluno`**, `**id_turma**`; `**lingua_portuguesa**`, `**matematica**`, `**ciencias**` (filtro: as três não nulas).  |
+| **Staging**      | `stg_aluno`                       | `**id_aluno`**, `**id_turma**`, `**faixa_etaria**`, `**bairro**` (com `bairro is not null` no intermediate).            |
+| **Staging**      | `stg_turma`                       | `**id_aluno`**, `**id_turma**` (inner join com avaliação).                                                              |
+
+
+**Joins no intermediate:** `al.id_aluno = av.id_aluno` e `al.id_turma = av.id_turma`; o mesmo par `**(id_aluno, id_turma)`** para `turma_sem_duplicados`.
 
 **Materializar antes de testar:** `dbt build --select mart_resultado_por_faixa_etaria mart_resultado_por_bairro` (ou `dbt run` nesses models e depois `dbt test`).
 
@@ -229,3 +261,4 @@ dbt_project.yml
 Se usar `packages.yml`: `dbt deps` antes de `dbt run`.
 
 ---
+
