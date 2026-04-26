@@ -11,55 +11,87 @@ models:
       - name: faixa_etaria
         description: Faixa etária do agrupamento.
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
           - unique
           - accepted_values:
               values: ["0-5", "6-10", "11-14", "15-17", "18+"]
       - name: total_alunos
         description: Quantidade de linhas (aluno × turma) na faixa.
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
           - dbt_utils.accepted_range:
               min_value: 0.0
       - name: pct_alunos_aprovados_lingua_portuguesa
         description: Percentual aprovados em língua portuguesa na faixa.
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
           - dbt_utils.accepted_range:
               min_value: 0.0
               max_value: 100.0
       - name: pct_alunos_reprovados_lingua_portuguesa
         description: Percentual reprovados em língua portuguesa na faixa.
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
           - dbt_utils.accepted_range:
               min_value: 0.0
               max_value: 100.0
       - name: pct_alunos_aprovados_matematica
         description: Percentual aprovados em matemática na faixa.
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
           - dbt_utils.accepted_range:
               min_value: 0.0
               max_value: 100.0
       - name: pct_alunos_reprovados_matematica
         description: Percentual reprovados em matemática na faixa.
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
           - dbt_utils.accepted_range:
               min_value: 0.0
               max_value: 100.0
       - name: pct_alunos_aprovados_ciencias
         description: Percentual aprovados em ciências na faixa.
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
           - dbt_utils.accepted_range:
               min_value: 0.0
               max_value: 100.0
       - name: pct_alunos_reprovados_ciencias
         description: Percentual reprovados em ciências na faixa.
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
           - dbt_utils.accepted_range:
               min_value: 0.0
               max_value: 100.0
@@ -74,53 +106,85 @@ models:
       - name: bairro
         description: Identificador de bairro (fonte anonimizada).
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
           - unique
       - name: total_alunos
         description: Quantidade de linhas (aluno × turma) no bairro.
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
           - dbt_utils.accepted_range:
               min_value: 1.0
       - name: pct_alunos_aprovados_lingua_portuguesa
         description: Percentual aprovados em língua portuguesa no bairro.
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
           - dbt_utils.accepted_range:
               min_value: 0.0
               max_value: 100.0
       - name: pct_alunos_reprovados_lingua_portuguesa
         description: Percentual reprovados em língua portuguesa no bairro.
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
           - dbt_utils.accepted_range:
               min_value: 0.0
               max_value: 100.0
       - name: pct_alunos_aprovados_matematica
         description: Percentual aprovados em matemática no bairro.
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
           - dbt_utils.accepted_range:
               min_value: 0.0
               max_value: 100.0
       - name: pct_alunos_reprovados_matematica
         description: Percentual reprovados em matemática no bairro.
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
           - dbt_utils.accepted_range:
               min_value: 0.0
               max_value: 100.0
       - name: pct_alunos_aprovados_ciencias
         description: Percentual aprovados em ciências no bairro.
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
           - dbt_utils.accepted_range:
               min_value: 0.0
               max_value: 100.0
       - name: pct_alunos_reprovados_ciencias
         description: Percentual reprovados em ciências no bairro.
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
           - dbt_utils.accepted_range:
               min_value: 0.0
               max_value: 100.0
