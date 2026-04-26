@@ -244,10 +244,13 @@ Ambos os marts agregam **só** `int_media_disciplina_por_aluno` (notas + cadastr
 
 ## 11. Estrutura útil do repositório
 
+Inventário de **PKs, FKs, enums e campos obrigatórios** por model (`stg_*`, `mart_*`): [`docs/model_contracts.md`](docs/model_contracts.md).
+
 ```
 models/staging/     # stg_* + _sources.yml
 models/intermediate/
 models/marts/
+docs/model_contracts.md
 scripts/load_data.py
 dbt-config/.dbt/profiles.yml
 Dockerfile
