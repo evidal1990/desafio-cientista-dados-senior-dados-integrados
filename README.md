@@ -1,208 +1,89 @@
-# Desafio Técnico - Cientista de Dados Sênior
+# Desafio dbt — dados educacionais (RMI)
 
-## Registro Municipal Integrado (RMI)
-
----
-
-## Contexto
-
-O **Registro Municipal Integrado (RMI)** é o data warehouse estratégico da Prefeitura do Rio de Janeiro, que consolida dados de saúde, educação, assistência social e dezenas de outros sistemas municipais. A qualidade, confiabilidade e rastreabilidade desses dados são fundamentais para políticas públicas baseadas em evidências.
-
-Como Cientista de Dados Sênior no RMI, você liderará a modelagem analítica e a governança de dados que orientam decisões para milhões de cariocas. A **engenharia de analytics** — transformação, teste e documentação de dados — é a espinha dorsal da função.
-
-Este desafio avalia suas habilidades em **modelagem de dados com dbt**, estratégia de testes e qualidade, SQL analítico e documentação técnica, usando dados educacionais anonimizados que simulam o contexto real do RMI.
+Projeto **dbt Core + Postgres**: staging → intermediate → marts. Dados anonimizados (Parquets no GCS).
 
 ---
 
-## Instruções
+## Pré-requisitos
 
-1. Faça um fork do repositório do desafio para colocar a sua solução
-2. Organize o projeto seguindo as boas práticas de dbt descritas abaixo
-3. Inclua **README.md** explicando abordagem, decisões de arquitetura e como reproduzir
-4. **Entrega**: Envie o link do repositório para `selecao.pcrj@gmail.com`
+- **Git**, **Python 3.10+**, **Docker** (opcional, para Postgres e/ou ambiente dbt).
+- Conta Google com acesso ao bucket **público** `gs://case_vagas/rmi/` (ou copiar os ficheiros por outro meio).
 
 ---
 
-## Dados
-
-Os dados deste desafio representam registros educacionais da rede municipal, **anonimizados e aleatorizados** para fins de avaliação. Eles foram disponibilizados como arquivos Parquet em um bucket do Google Cloud Storage (GCS).
-
-### Tabelas Disponíveis
-
-| Arquivo (GCS) | Descrição | Granularidade |
-|----------------|-----------|---------------|
-| `aluno.parquet` | Cadastro de alunos (IDs anonimizados, faixa etária, bairro anonimizado) | 1 linha por aluno |
-| `escola.parquet` | Cadastro de unidades escolares (IDs anonimizados, tipo, região) | 1 linha por escola |
-| `turma.parquet` | Informações de turmas (série, turno, ano letivo) | 1 linha por turma |
-| `frequencia.parquet` | Registros de frequência escolar | 1 linha por aluno/dia |
-| `avaliacao.parquet` | Notas e avaliações por bimestre | 1 linha por aluno/disciplina/bimestre |
-
-### Tabela Auxiliar Pública
-
-| Tabela (BigQuery) | Descrição |
-|--------------------|-----------|
-| `datario.dados_mestres.bairro` | Cadastro de bairros do Rio de Janeiro |
-
-### Acesso aos dados
-
-Os arquivos Parquet estão disponíveis no bucket GCS:
-
-```
-https://console.cloud.google.com/storage/browser/case_vagas/rmi
-```
-
-Alternativamente, os arquivos podem ser carregados diretamente em um dataset BigQuery pessoal para uso com dbt-bigquery (veja instruções no FAQ).
-
-**⚠️ IMPORTANTE sobre os dados:**
-
-- Os dados foram **anonimizados**: todos os identificadores pessoais (nomes, CPFs, endereços) foram removidos e substituídos por IDs sintéticos
-- Os valores numéricos foram **aleatorizados** (com preservação de distribuições e relações entre tabelas)
-- **Não tente reidentificar** registros ou cruzar com fontes externas
-- Os dados servem para avaliar sua capacidade técnica de modelagem, não para gerar insights reais sobre a rede educacional
-
----
-
-## Parte 1: Projeto dbt e Modelagem
-
-**Construa um projeto dbt do zero** (`dbt-core` + adapter de sua escolha) que transforme os dados brutos em camadas analíticas.
-
-### 1. Configuração e Estrutura do Projeto
-
-Configure o projeto dbt com sources apontando para os dados disponibilizados. Organize os models seguindo a convenção de camadas staging → intermediate → marts.
-
-**Entregue**: Projeto dbt funcional (`dbt run` executa sem erros), com `dbt_project.yml` configurado, sources definidas e estrutura de diretórios organizada.
-
-### 2. Camada de Staging
-
-Crie models de staging para **pelo menos 4 tabelas** fonte. Aplique limpeza, padronização de nomes, tipagem, tratamento de nulos e filtros básicos de qualidade.
-
-**Entregue**: Models de staging com naming convention consistente, lógica de limpeza documentada e `schema.yml` com descrições das sources e colunas.
-
-### 3. Camada Intermediate
-
-Crie **pelo menos 1 model intermediate** que combine dados de múltiplas fontes. Por exemplo: um modelo que una alunos + matrículas + frequência para calcular métricas de presença por aluno/período.
-
-**Entregue**: Model(s) intermediate com lógica de join documentada (premissas, tipo de join, tratamento de registros órfãos) e justificativa das decisões de modelagem.
-
-### 4. Camada de Marts
-
-Construa **pelo menos 1 mart** orientado a responder uma pergunta analítica relevante para gestores públicos. Sugestões (ou proponha a sua):
-
-- **Absenteísmo crônico por região:** Quais escolas/regiões têm maior taxa de alunos com frequência abaixo de 75%?
-- **Desempenho por perfil de turma:** Como a composição das turmas (tamanho, série, turno) se correlaciona com desempenho nas avaliações?
-
-**Entregue**: Mart(s) materializados como table ou incremental, com `schema.yml` contendo descrições, e uma breve análise dos resultados (pode ser no README ou em um notebook auxiliar).
-
----
-
-## Parte 2: Testes e Qualidade de Dados
-
-**Esta é a parte mais importante do desafio.** A confiabilidade dos dados do RMI depende de uma estratégia sólida de testes.
-
-### 5. Testes Genéricos
-
-Aplique testes built-in do dbt (`unique`, `not_null`, `accepted_values`, `relationships`) nos models de staging e marts. A cobertura deve ser intencional — não basta testar tudo mecanicamente, queremos ver critério na escolha do que testar e por quê.
-
-**Entregue**: Testes configurados nos `schema.yml`, todos passando com `dbt test`. Documente brevemente por que cada teste é relevante (pode ser em comentários no YAML ou no README).
-
-### 6. Testes de Regra de Negócio
-
-Crie **pelo menos 2 testes singular ou customizados** que validem regras de negócio educacionais. Exemplos:
-
-- "Nenhum registro de frequência deve ter data anterior à data de matrícula do aluno naquela turma"
-- "Todo aluno com movimentação de tipo 'abandono' deve ter sua última frequência registrada antes da data da movimentação"
-- "A soma de presença + ausência por aluno/dia não deve ultrapassar a carga horária da turma"
-
-**Entregue**: Testes implementados (em `tests/` ou como macros), passando com `dbt test`, com documentação explicando a regra validada e por que ela importa.
-
----
-
-## Parte 3: Documentação e Análise
-
-### 8. Documentação do Projeto
-
-Produza documentação que permita a um novo membro do time entender e dar manutenção ao projeto.
-
-**Entregue**: README.md com instruções de setup e execução, diagrama ou descrição do lineage (staging → intermediate → marts), decisões de arquitetura (materializations, naming conventions, estratégia de testes), trade-offs identificados e o que faria diferente com mais tempo.
-
-### 9. Análise Exploratória (opcional, diferencial)
-
-Elabore um notebook Python complementar com uma análise exploratória dos dados que justifique suas escolhas de modelagem.
-
-**Entregue**: Notebook documentado mostrando padrões encontrados nos dados, anomalias ou problemas de qualidade identificados, e como isso influenciou suas decisões no dbt.
-
----
-
-## Avaliação
-
-Você será avaliado em cada uma das categorias abaixo:
-
-- **Modelagem e arquitetura dbt**
-- **Estratégia de testes e qualidade**
-- **SQL e lógica analítica**
-- **Documentação e comunicação**
-
-Os melhores candidatos serão chamados para a etapa de entrevistas.
-
-**Dica**: profundidade importa mais que completude. Melhor ter menos models com testes excelentes e documentação clara do que muitos models superficiais.
-
-### Diferenciais
-
-- Uso de dbt packages (`dbt_utils`, `dbt_expectations`, `codegen`)
-- Configuração de `freshness` nas sources
-- Uso de tags, hooks ou exposures
-- Testes de data contracts
-- Análise exploratória complementar (Parte 3, questão 9)
-- Configuração de CI com `dbt build` em GitHub Actions
-
----
-
-## Estrutura Sugerida do Repositório
-
-```
-.
-├── README.md
-├── dbt_project.yml
-├── packages.yml              # (se usar dbt packages)
-├── models/
-│   ├── staging/
-│   │   ├── stg_educacao__aluno.sql
-│   │   ├── stg_educacao__escola.sql
-│   │   ├── ...
-│   │   └── schema.yml
-│   ├── intermediate/
-│   │   ├── int_educacao__aluno_frequencia.sql
-│   │   └── schema.yml
-│   └── marts/
-│       ├── mart_educacao__absenteismo.sql
-│       └── schema.yml
-├── tests/                    # Testes singular
-├── macros/                   # Macros customizadas
-├── seeds/                    # Dados auxiliares (se aplicável)
-├── notebooks/                # (opcional) Análise exploratória
-│   └── eda.ipynb
-├── data/                     # Parquets baixados (não commitar)
-│   └── .gitkeep
-└── requirements.txt
-```
-
-### Projeto dbt — setup e execução
-
-O repositório inclui um projeto **dbt** na raiz (camadas `staging` → `intermediate` → `marts`).
-
-**Pré-requisitos:** Python 3.10+; warehouse configurado e dados brutos carregados conforme a seção [Dados](#dados) deste README.
-
-**Setup:**
+## 1. Clonar e ambiente Python
 
 ```bash
-python -m venv .venv && source .venv/bin/activate  # Windows: .venv\Scripts\activate
+git clone <URL_DO_SEU_REPO> && cd <PASTA_DO_REPO>
+python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-# Opcional: dbt deps  (se habilitar packages em packages.yml)
 ```
 
-Configure `~/.dbt/profiles.yml` com o profile `desafio_rmi_ds` apontando para seu dataset/schema e ajuste `vars.raw_schema` / sources em `models/staging/_sources.yml` se necessário. Parquets locais (se usar): coloque em `data/` — não são versionados.
+---
 
-**Comandos:**
+## 2. Postgres (Docker)
+
+Na máquina host (porta **5432** livre):
+
+```bash
+docker run -d --name postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=desafio_rmi_ds \
+  -p 5432:5432 \
+  postgres:16
+```
+
+- **pgAdmin / dbt no host:** Host `localhost`, porta `5432`, base `desafio_rmi_ds`, utilizador `postgres`, palavra-passe `postgres` (ajuste se mudar o `-e`).
+- **Remover:** `docker rm -f postgres` (e `docker rmi postgres:16` só depois de remover o contêiner).
+
+---
+
+## 3. Descarregar Parquets para `data/`
+
+Os ficheiros no bucket **não** têm extensão `.parquet` no nome do objeto.
+
+```bash
+mkdir -p data
+# Se o gsutil reclamar de Python 3.13 no Mac:
+export CLOUDSDK_PYTHON=/opt/homebrew/bin/python3.12   # ajuste ao seu python3.12
+gsutil -m cp \
+  "gs://case_vagas/rmi/aluno" \
+  "gs://case_vagas/rmi/avaliacao" \
+  "gs://case_vagas/rmi/escola" \
+  "gs://case_vagas/rmi/frequencia" \
+  "gs://case_vagas/rmi/turma" \
+  data/
+```
+
+(`data/` está no `.gitignore`; não versionar os binários.)
+
+---
+
+## 4. Criar tabelas brutas no Postgres
+
+O dbt lê **sources** no schema `**raw`** (variável `raw_schema` no `dbt_project.yml`).
+
+```bash
+export POSTGRES_HOST=localhost POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres POSTGRES_DB=desafio_rmi_ds
+# opcional: RAW_SCHEMA=raw  DATA_DIR=./data
+python scripts/load_data.py
+```
+
+Cria o schema se precisar e as tabelas `aluno`, `escola`, `turma`, `frequencia`, `avaliacao`.
+O script usa `**RAW_SCHEMA**` (padrão `**raw**`), alinhado a `vars.raw_schema` no dbt.
+
+---
+
+## 5. Perfil dbt (`profiles.yml`)
+
+- **Nome do profile:** `desafio_rmi_ds` (igual a `profile:` no `dbt_project.yml`).
+- Copie `dbt-config/.dbt/profiles.yml` para `~/.dbt/profiles.yml` **ou** use `profiles.yml.example` como modelo.
+- Ajuste **host**, **password** e **dbname** se necessário. O ficheiro no repo usa **valores literais** (sem `env_var`).
+- `**schema` no profile (dev):** usado para models **sem** `+schema` literal na macro (ver `generate_schema_name.sql`). Os `stg_*` usam `**+schema: staging`** e, em dev, o schema físico é só `**staging**` (não `{{ target.schema }}_staging`). Pode ser diferente de `vars.raw_schema` (tabelas brutas). Em `**--target prod**` use outro `target.schema` (ex.: `desafio_rmi_ds_prod`).
+
+---
+
+## 6. dbt (na raiz do repo, com `.venv` ativo)
 
 ```bash
 dbt debug
@@ -211,37 +92,173 @@ dbt test
 dbt docs generate && dbt docs serve
 ```
 
-| Pasta | Uso |
-|--------|-----|
-| `models/staging` | Limpeza e padronização (`stg_educacao__*`) |
-| `models/intermediate` | Joins e métricas intermediárias |
-| `models/marts` | Tabelas analíticas para negócio |
-| `tests` | Testes singulares |
-| `macros` | Macros reutilizáveis |
-| `seeds` | CSVs auxiliares (opcional) |
-| `data` | Parquets baixados localmente (gitignored) |
-| `notebooks` | EDA opcional |
+- **Só staging:** `dbt run --select path:models/staging`
+- `**dbt compile`** não cria objetos no warehouse; só `**dbt run**` / `**dbt build**`.
 
 ---
 
-## FAQ
+## 7. Docker — imagem com dbt
 
-**1. Preciso usar BigQuery como warehouse?**
-Não obrigatoriamente. Você pode carregar os Parquets em um dataset BigQuery pessoal (recomendado para simular o ambiente real) ou, por exemplo, usar DuckDB como alternativa local (`dbt-duckdb`). O importante é que o projeto dbt funcione end-to-end.
+**Build** (na raiz do repositório):
 
-**4. Os dados estão anonimizados — posso confiar nas relações entre tabelas?**
-Sim. As chaves de relacionamento (IDs de aluno, escola, turma) foram preservadas consistentemente entre as tabelas. As distribuições estatísticas foram mantidas, mas os valores individuais foram aleatorizados.
+```bash
+docker build -t desafio-dbt:dev .
+```
 
-**5. Preciso fazer todas as partes?**
-Sim, exceto a Parte 3 questão 9 (análise exploratória), que é opcional. Mas profundidade importa mais que completude — melhor fazer menos com excelência.
+**Run** (monta o código em `/work`; Postgres no host no Mac/Windows):
 
-**6. Posso usar dbt packages?**
-Sim, e é um diferencial! Sugestões: `dbt_utils`, `dbt_expectations`, `codegen`.
+```bash
+docker run -it --rm --name desafio-dbt-dev \
+  -v "$PWD:/work" -w /work \
+  desafio-dbt:dev bash
+```
+
+Dentro do contêiner: `cd /work`, ajuste `host` no `/root/.dbt/profiles.yml` para `**host.docker.internal**` se o Postgres correr no **host**. No **Docker em Linux**:
+
+```bash
+docker run -it --rm --name desafio-dbt-dev \
+  --add-host=host.docker.internal:host-gateway \
+  -v "$PWD:/work" -w /work \
+  desafio-dbt:dev bash
+```
+
+Alternativa de build: `docker build -f dbt-config/Dockerfile -t desafio-dbt:dev dbt-config` — ver `[dbt-config/README.md](dbt-config/README.md)`.
+
+**Remover imagem/contêiner dbt:** `docker rm -f desafio-dbt-dev` → `docker rmi desafio-dbt:dev`.
 
 ---
 
-## Contato
+## 8. Postgres (Estrutura)
 
-Dúvidas? Envie um email para: **<fernanda.scovino@prefeitura.rio>**
 
-Boa sorte! 🚀
+| O quê                         | Onde                                                                                        |
+| ----------------------------- | ------------------------------------------------------------------------------------------- |
+| Tabelas brutas (carga Python) | schema `**vars.raw_schema`** (padrão `**raw**`; ver `dbt_project.yml`)                      |
+| Views `**stg_***` (dev)       | schema físico `**staging**` (`+schema: staging`; macro dev não prefixa com `target.schema`) |
+| Tabelas `**mart_***`          | schema físico `**marts**` (separado do schema dos dados brutos)                             |
+| **Intermediate** `ephemeral`  | sem tabela/view no Postgres (SQL inlinado nos downstream)                                   |
+| **prod**                      | `stg_*` em `**{target.schema}_staging`**; `**mart_***` no schema `**marts**`                |
+
+
+---
+
+## 9. Resultado dos testes (staging) e padronização
+
+### O que foi padronizado na camada staging
+
+- **Tipos explícitos** nos `stg_*`: conversões com `::text`, `::bigint`, `::date`, `::float` (conforme o model), alinhando a tipagem às descrições em `models/staging/schema.yml`.
+- **Nomes de colunas legíveis** em `stg_avaliacao`: as disciplinas `disciplina_1`…`disciplina_4` passam a se chamar `lingua_portuguesa`, `ciencias`, `ingles`, `matematica`.
+
+### Inconsistências encontradas nos dados
+
+Na exploração da base carregada, registaram-se as seguintes situações em `**stg_aluno`** (refletem a fonte `aluno` após o mesmo pipeline de staging):
+
+- `**id_turma`:** nem todos os alunos têm turma associada.
+- `**bairro`:** nem todos os alunos têm bairro associado.
+- **68** linhas não distintas
+
+Na exploração da base carregada, registaram-se as seguintes situações em `**stg_frequencia`** (refletem a fonte `frequencia` após o mesmo pipeline de staging):
+
+- **1469** linhas não distintas
+- **id_turma:** com 338536 registros que não estão associados a um id_turma de `**stg_turma`**
+
+Na exploração da base carregada, registaram-se as seguintes situações em `**stg_avaliacao**` (refletem a fonte `avaliacao` após o mesmo pipeline de staging):
+
+- `**ciencias`:** nem todos os alunos têm nota de ciencias associada (35931 dados nulos).
+- `**ingles`:** nem todos os alunos têm nota de ingles associada (221687 dados nulos).
+- `**matematica`:** nem todos os alunos têm nota de matematica associada (35462 dados nulos).
+- `**lingua_portuguesa`:** nem todos os alunos têm nota de lingua_portuguesa associada (34609 dados nulos).
+- `**frequencia`:** nem todos os alunos têm frequencia associada (1734 dados nulos).
+- **34** linhas não distintas
+- **id_turma:** com 184 registros que não estão associados a um id_turma de `**stg_turma`**
+
+---
+
+## 10. Marts de resultado (`mart_resultado_por_faixa_etaria`, `mart_resultado_por_bairro`)
+
+### Definições (percentuais, período, população)
+
+
+| Tema                    | Definição usada neste projeto                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Percentuais (0–100)** | Em cada grupo (`faixa_etaria` ou `bairro`), `pct_*` = contagem de linhas com `resultado_*` = Aprovado ou Reprovado dividida por `total_alunos` do mesmo grupo (`× 100`, arredondado a 2 casas). `total_alunos` é o número de linhas **aluno × turma** em `int_media_disciplina_por_aluno` naquele grupo. **Não** há limiar de **75%** nos modelos: o corte de aprovação é média ≥ **5,0** (escala 0–10) por disciplina no intermediate. |
+| **Período**             | **Sem** filtro de datas explícito nos marts ou no `int_media_disciplina_por_aluno`. As médias são calculadas sobre **todas** as linhas de avaliação distintas do extract que passam nos filtros (em geral todos os bimestres presentes na fonte `raw.avaliacao`).                                                                                                                                                                       |
+| **População incluída**  | Alunos presentes em `stg_aluno` **e** `stg_turma` na chave `(id_aluno, id_turma)`, com `**lingua_portuguesa`**, `**matematica**` e `**ciencias**` não nulas em `stg_avaliacao`; `**bairro` não nulo** em `stg_aluno`. Inglês não entra. Cada linha do intermediate = um par aluno×turma com médias e resultados binários por disciplina.                                                                                                |
+| **Mart por bairro**     | Igual à população acima, agregada por `bairro`. O SQL actual **não** aplica `having` extra: todos os bairros presentes no intermediate aparecem na mart.                                                                                                                                                                                                                                                                                |
+
+
+### O que estes marts **não** medem
+
+- **Frequência** (`stg_frequencia`) e vínculo detalhado com **escola** (além do que já está implícito no cadastro).
+- **Inglês** e qualquer disciplina fora lingua_portuguesa / matemática / ciências no intermediate.
+- Alunos **sem** as três notas, **sem** turma válida no inner join, ou **sem** `bairro` (ficam fora do pipeline destes marts).
+- **Comparação entre anos** ou séries temporais (não há partição por ano no mart).
+- **Inferência** para fora da amostra, intervalos de confiança ou causalidade (ex.: desempenho “por bairro” não implica efeito do bairro).
+
+### Análise - `mart_resultado_por_bairro`
+
+A mart contém **771** bairros; na tabela, os **cinco** com maior `total_alunos` (linhas aluno×turma), por ordem decrescente, e o % de aprovação por disciplina.
+
+| `bairro`             | `total_alunos` | Língua portuguesa (% aprov.) | Matemática (% aprov.) | Ciências (% aprov.) |
+| -------------------: | -------------: | ---------------------------: | --------------------: | --------------------: |
+| -6888326179602323732 |           3038 |                        85,45% |                 76,86% |                77,91% |
+| -1679083123460691310 |           2906 |                        86,72% |                 79,49% |                83,28% |
+| -2784322559717078693 |           2176 |                        75,23% |                 67,37% |                71,83% |
+| 7225990828785393240  |           1922 |                        82,10% |                 75,44% |                78,82% |
+| 20322782284730250    |           1625 |                        84,74% |                 78,28% |                81,85% |
+
+Para reproduzir: `select * from marts.mart_resultado_por_bairro order by total_alunos desc limit 5;` (schema **`marts`** após `dbt run`).
+
+### Análise - `mart_resultado_por_faixa_etaria`
+
+A mart contém **3** faixas etárias presentes no extract (`11-14`, `15-17`, `18+`). Abaixo, `total_alunos` é o número de linhas aluno×turma por faixa (mesmo significado que na mart) e as restantes colunas são os `pct_alunos_aprovados_*`.
+
+| `faixa_etaria` | `total_alunos` | Língua portuguesa (% aprov.) | Matemática (% aprov.) | Ciências (% aprov.)   |
+| -------------: | -------------: | ---------------------------: | --------------------: | --------------------: |
+| 11-14          |           4108 |                        63,49%|                 58,08% |                62,66%|
+| 15-17          |          44301 |                        84,64%|                 74,59% |                80,24%|
+| 18+            |           2414 |                        65,99%|                 63,96% |                65,00%|
+
+Para reproduzir: `select * from marts.mart_resultado_por_faixa_etaria order by faixa_etaria;` (schema **`marts`** após `dbt run`).
+
+### Dependências em cadeia
+
+Ambos os marts agregam **só** `int_media_disciplina_por_aluno` (notas + cadastro + turma). **Não** usam `stg_frequencia` nem `stg_escola` diretamente.
+
+
+| Camada           | Model                             | Chaves / colunas usadas                                                                                                 |
+| ---------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **Mart**         | `mart_resultado_por_faixa_etaria` | Lê `int_media_disciplina_por_aluno`; agrupa por `**faixa_etaria`**; percentuais a partir de `resultado_*`.              |
+| **Mart**         | `mart_resultado_por_bairro`       | Lê o mesmo intermediate; agrupa por `**bairro`**.                                                                       |
+| **Intermediate** | `int_media_disciplina_por_aluno`  | Grão `**(id_aluno, id_turma, faixa_etaria, bairro)`**; médias de lingua_portuguesa, matemática e ciências; regra ≥ 5,0. |
+| **Staging**      | `stg_avaliacao`                   | `**id_aluno`**, `**id_turma**`; `**lingua_portuguesa**`, `**matematica**`, `**ciencias**` (filtro: as três não nulas).  |
+| **Staging**      | `stg_aluno`                       | `**id_aluno`**, `**id_turma**`, `**faixa_etaria**`, `**bairro**` (com `bairro is not null` no intermediate).            |
+| **Staging**      | `stg_turma`                       | `**id_aluno`**, `**id_turma**` (inner join com avaliação).                                                              |
+
+
+**Joins no intermediate:** `al.id_aluno = av.id_aluno` e `al.id_turma = av.id_turma`; o mesmo par `**(id_aluno, id_turma)`** para `turma_sem_duplicados`.
+
+**Materializar antes de testar:** `dbt build --select mart_resultado_por_faixa_etaria mart_resultado_por_bairro` (ou `dbt run` nesses models e depois `dbt test`).
+
+---
+
+## 11. Estrutura útil do repositório
+
+```
+models/staging/     # stg_* + _sources.yml
+models/intermediate/
+models/marts/
+scripts/load_data.py
+dbt-config/.dbt/profiles.yml
+Dockerfile
+dbt_project.yml
+```
+
+---
+
+## 12. Pacotes dbt
+
+Se usar `packages.yml`: `dbt deps` antes de `dbt run`.
+
+---
+

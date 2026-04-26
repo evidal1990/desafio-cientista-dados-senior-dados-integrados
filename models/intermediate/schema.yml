@@ -1,10 +1,24 @@
 version: 2
 
 models:
-  - name: int_educacao__aluno_frequencia
+  - name: int_media_disciplina_por_aluno
     description: >
-      Camada intermediária que combina frequência com aluno (left join).
-      Documente premissas: chave de join, tratamento de órfãos e filtros temporais.
+      **Views:** `stg_avaliacao`, `stg_aluno`, `stg_turma`.
+      Cálculo de médias das notas nas linhas de avaliação distintas que passam nos filtros de nulidade.
+      **Grão:** uma linha por `(id_aluno, id_turma, faixa_etaria)`.
+      **Joins:** `inner join` em aluno e turma na chave composta `(id_aluno, id_turma)`.
+      **Regra de aprovação:** média aritmética por disciplina (lingua portuguesa, matemática e ciências). Se >= 5.0 o aluno está aprovado. Senão, reprovado.
+
     columns:
-      - name: _fk_aluno_resolvido
-        description: Referência ao aluno após o join (ajuste se renomear colunas no staging).
+      - name: id_aluno
+        description: Identificador único do aluno.
+      - name: id_turma
+        description: Identificador único da turma.
+      - name: faixa_etaria
+        description: Faixa etária do aluno.
+      - name: resultado_lingua_portuguesa
+        description: Texto Aprovado ou Reprovado de acordo com a média de lingua portuguesa.
+      - name: resultado_matematica
+        description: Texto Aprovado ou Reprovado de acordo com a média de matematica.
+      - name: resultado_ciencias
+        description: Texto Aprovado ou Reprovado de acordo com a média de ciencias.

@@ -1,20 +1,285 @@
 version: 2
 
 models:
-  - name: stg_educacao__aluno
-    description: Staging do cadastro de alunos — padronizar nomes, tipos e regras de qualidade aqui.
+  - name: stg_aluno
+    description: "Tabela de cadastro de alunos anonimizada e aleatorizada para o ano letivo de 2025. Contém identificadores sintéticos, faixas etárias e bairros anonimizados."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          config:
+            severity: error
+            error_if: ">1000"
+            warn_if: ">10"
+          combination_of_columns:
+            - id_aluno
+            - id_turma
+            - faixa_etaria
+            - bairro
     columns:
       - name: id_aluno
-        description: Identificador sintético do aluno (ajuste ao nome real da coluna na fonte).
+        description: "Identificador único do aluno na base de dados."
+        data_type: STRING
+        tests:
+          - not_null
+          - unique
+      - name: id_turma
+        description: "Identificador único da turma (Hash com salt aplicado sobre o id_turma original)."
+        data_type: INT64
+        tests:
+          - not_null
+      - name: faixa_etaria
+        description: "Faixa etária do aluno agrupada para evitar reidentificação (ex: 0-5, 6-10, 11-14, 15-17, 18+). Derivada da coluna idade_atual."
+        data_type: STRING
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["0-5", "6-10", "11-14", "15-17", "18+"]
+      - name: bairro
+        description: "Hash do bairro; a fonte admite NULL (ausência de bairro)."
+        data_type: INT64
+        tests:
+          - not_null:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
 
-  - name: stg_educacao__escola
-    description: Staging do cadastro de escolas.
+  - name: stg_escola
+    description: "Cadastro de unidades escolares pertencentes à rede municipal, com identificadores e localização anonimizados via hashing."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          config:
+            severity: error
+            error_if: ">1000"
+            warn_if: ">10"
+          combination_of_columns:
+            - id_escola
+            - bairro
+    columns:
+      - name: id_escola
+        description: "Identificador único da unidade escolar na base de dados (Hash com salt aplicado sobre o id_escola original)."
+        data_type: INT64
+        tests:
+          - not_null
+          - unique
+      - name: bairro
+        description: "Hash do bairro onde a unidade escolar está localizada (aplicado sobre o campo bairro original)."
+        data_type: INT64
+        tests:
+          - not_null:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
+          - unique
 
-  - name: stg_educacao__turma
-    description: Staging de turmas.
+  - name: stg_turma
+    description: "Relacionamento entre alunos e turmas para o ano letivo, com dados de tempo anonimizados."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          config:
+            severity: error
+            error_if: ">1000"
+            warn_if: ">10"
+          combination_of_columns:
+            - ano
+            - id_turma
+            - id_aluno
+    columns:
+      - name: ano
+        description: "Ano letivo da turma, anonimizado de forma determinística para o valor 2000."
+        data_type: INT64
+        tests:
+          - not_null:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
+          - accepted_values:
+              values: [2000]
+      - name: id_turma
+        description: "Identificador único da turma na base de dados (Hash com salt aplicado sobre o id_turma original)."
+        data_type: INT64
+        tests:
+          - not_null
+      - name: id_aluno
+        description: "Identificador único do aluno associado à turma."
+        data_type: STRING
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
+              to: ref("stg_aluno")
+              field: id_aluno
 
-  - name: stg_educacao__frequencia
-    description: Staging de frequência (aluno/dia ou granularidade da fonte).
+  - name: stg_frequencia
+    description: "Registros de frequência escolar por disciplina e período, com mapeamento consistente de IDs de alunos e anonimização de datas."
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "data_inicio::date between date '2000-01-01' and date '2000-12-31'"
+      - dbt_utils.expression_is_true:
+          expression: "data_fim::date between date '2000-01-01' and date '2000-12-31'"
+      - dbt_utils.unique_combination_of_columns:
+          config:
+            severity: error
+            error_if: ">1000"
+            warn_if: ">10"
+          combination_of_columns:
+            - id_escola
+            - id_aluno
+            - id_turma
+            - data_inicio
+            - data_fim
+            - disciplina
+            - frequencia
+    columns:
+      - name: id_escola
+        description: "Identificador único da unidade escolar (Hash com salt)."
+        data_type: INT64
+        tests:
+          - not_null
+          - relationships:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
+              to: ref("stg_escola")
+              field: id_escola
+      - name: id_aluno
+        description: "Identificador único do aluno, mapeado para garantir consistência com a tabela stg_aluno."
+        data_type: STRING
+        tests:
+          - not_null
+          - relationships:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
+              to: ref("stg_aluno")
+              field: id_aluno
+      - name: id_turma
+        description: "Turma (hash). Regra de negócio assumida no dbt: todo id_turma em frequência deve aparecer em stg_turma (matrícula). Falhas do teste relationships indicam inconsistência entre tabelas brutas ou recorte de carga — tratar na origem ou enriquecer stg_turma, em vez de desligar o teste."
+        data_type: INT64
+        tests:
+          - not_null
+          - relationships:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
+              to: ref("stg_turma")
+              field: id_turma
+      - name: data_inicio
+        description: "Data de início do período de apuração da frequência (Ano anonimizado para 2000)."
+        data_type: DATE
+        tests:
+          - not_null
+      - name: data_fim
+        description: "Data de fim do período de apuração da frequência (Ano anonimizado para 2000)."
+        data_type: DATE
+        tests:
+          - not_null
+      - name: disciplina
+        description: "Nome da disciplina mapeado como 'lingua_portuguesa', 'ciencias', 'ingles', 'matematica'."
+        data_type: STRING
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["lingua_portuguesa", "ciencias", "ingles", "matematica"]
+      - name: frequencia
+        description: "Percentual de frequência calculado como 100 - (faltas_disciplina / dias_letivos)."
+        data_type: FLOAT64
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 100.0
 
-  - name: stg_educacao__avaliacao
-    description: Staging de avaliações por bimestre.
+  - name: stg_avaliacao
+    description: "Notas e avaliações dos alunos por bimestre e disciplina. Os valores originais (0.0 a 10.0) receberam um ruído determinístico (jitter +/- 0.2) para anonimização."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          config:
+            severity: error
+            error_if: ">1000"
+            warn_if: ">10"
+          combination_of_columns:
+            - id_aluno
+            - id_turma
+            - bimestre
+    columns:
+      - name: id_aluno
+        description: "Identificador único do aluno na base de dados."
+        data_type: STRING
+        tests:
+          - not_null
+          - relationships:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
+              to: ref("stg_aluno")
+              field: id_aluno
+      - name: id_turma
+        description: "Identificador único da turma (Hash com salt)."
+        data_type: INT64
+        tests:
+          - not_null
+          - relationships:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
+              to: ref("stg_turma")
+              field: id_turma
+      - name: frequencia
+        description: "Percentual de frequência geral do aluno no bimestre (campo original da tabela de avaliação)."
+        data_type: FLOAT64
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 100.0
+      - name: bimestre
+        description: "Identificador do bimestre (id_coc), variando de 1 a 4."
+        data_type: INT64
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 4
+      - name: lingua_portuguesa
+        description: "Nota em Língua Portuguesa (fonte: disciplina_1), com jitter aleatório."
+        data_type: FLOAT64
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 10.0
+      - name: ciencias
+        description: "Nota em Ciências (fonte: disciplina_2), com jitter aleatório."
+        data_type: FLOAT64
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 10.0
+      - name: ingles
+        description: "Nota em Língua Estrangeira / Inglês (fonte: disciplina_3), com jitter aleatório."
+        data_type: FLOAT64
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 10.0
+      - name: matematica
+        description: "Nota em Matemática (fonte: disciplina_4), com jitter aleatório."
+        data_type: FLOAT64
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 10.0

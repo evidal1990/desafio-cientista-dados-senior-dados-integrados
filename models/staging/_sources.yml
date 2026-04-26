@@ -1,18 +1,32 @@
 version: 2
 
 sources:
-  - name: educacao_raw
+  - name: raw
     description: >
-      Fontes brutas educacionais (ex.: Parquets carregados no dataset/schema do warehouse).
+      Fontes brutas educacionais anônimas (desafio RMI): equivalentes aos Parquets em
+      gs://case_vagas/rmi/, carregadas no Postgres no schema definido por `vars.raw_schema`
+      (padrão `raw`, igual ao `RAW_SCHEMA` do `scripts/load_data.py`). IDs sensíveis vêm como texto hex.
     schema: "{{ var('raw_schema') }}"
     tables:
       - name: aluno
-        description: Cadastro de alunos (1 linha por aluno)
+        description: >
+          Cadastro de alunos (1 linha por aluno): id_aluno, id_turma, faixa_etaria, bairro
+          (conforme blobs Parquet do bucket).
+
       - name: escola
-        description: Cadastro de unidades escolares
+        description: >
+          Cadastro de unidades escolares (1 linha por escola): id_escola, bairro.
+
       - name: turma
-        description: Turmas (série, turno, ano letivo)
+        description: >
+          Relação turma/aluno/ano (1 linha por vínculo): ano, id_turma, id_aluno.
+
       - name: frequencia
-        description: Frequência escolar (granularidade aluno/dia)
+        description: >
+          Frequência escolar por período/disciplina (granularidade da fonte): id_escola,
+          id_aluno, id_turma, data_inicio, data_fim, disciplina, frequencia.
+
       - name: avaliacao
-        description: Notas e avaliações por bimestre
+        description: >
+          Notas e frequência por bimestre (1 linha por aluno/turma/bimestre na granularidade da fonte):
+          id_aluno, id_turma, frequencia, bimestre, disciplina_1..4.
