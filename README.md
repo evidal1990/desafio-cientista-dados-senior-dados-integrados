@@ -169,7 +169,25 @@ Na exploração da base carregada, registaram-se as seguintes situações em **`
 
 ---
 
-## 10. Estrutura útil do repositório
+## 10. Dependências do mart `mart_resultado_por_faixa_etaria`
+
+Este mart agrega **apenas notas e faixa etária** (avaliação + cadastro + turma). **Não** usa `stg_frequencia`, `stg_escola` nem `int_educacao__aluno_frequencia`.
+
+| Camada | Model | Chaves / colunas usadas |
+|--------|--------|-------------------------|
+| **Mart** | `mart_resultado_por_faixa_etaria` | Lê `int_media_disciplina_por_aluno`; agrupa por **`faixa_etaria`**; usa `resultado_*` (Aprovado/Reprovado) para percentuais. |
+| **Intermediate** | `int_media_disciplina_por_aluno` | Grão **`(id_aluno, id_turma, faixa_etaria)`**; médias de LP, matemática e ciências; regra ≥ 5,0. |
+| **Staging** | `stg_avaliacao` | **`id_aluno`**, **`id_turma`**; **`lingua_portuguesa`**, **`matematica`**, **`ciencias`** (filtro: as três não nulas; inglês não entra no SQL). |
+| **Staging** | `stg_aluno` | **`id_aluno`**, **`id_turma`** (join com avaliação); **`faixa_etaria`**. |
+| **Staging** | `stg_turma` | **`id_aluno`**, **`id_turma`** (inner join com avaliação). |
+
+**Joins no intermediate:** `al.id_aluno = av.id_aluno` e `al.id_turma = av.id_turma`; o mesmo par **`(id_aluno, id_turma)`** para `turma_sem_duplicados`.
+
+**Materializar antes de testar o mart:** `dbt build --select mart_resultado_por_faixa_etaria` (ou `dbt run` nesse model e depois `dbt test`).
+
+---
+
+## 11. Estrutura útil do repositório
 
 ```
 models/staging/     # stg_* + _sources.yml
@@ -183,7 +201,7 @@ dbt_project.yml
 
 ---
 
-## 11. Pacotes dbt
+## 12. Pacotes dbt
 
 Se usar `packages.yml`: `dbt deps` antes de `dbt run`.
 
