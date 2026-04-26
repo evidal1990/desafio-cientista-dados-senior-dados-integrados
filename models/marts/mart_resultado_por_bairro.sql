@@ -3,30 +3,28 @@
 /*
   Definições
   ----------
-  População incluída: linhas de int_media_disciplina_por_aluno (grão aluno × turma) com
-  join inner a aluno e turma; notas de LP, matemática e ciências todas não nulas no staging;
-  inglês fora do cálculo. Alunos sem bairro são excluídos no intermediate (não entram aqui).
+  População incluída: igual à de mart_resultado_por_faixa_etaria (via
+  int_media_disciplina_por_aluno): aluno × turma com LP, matemática e ciências não nulas,
+  presença em stg_turma e stg_aluno com bairro não nulo. Cada linha do mart é um bairro
+  (identificador anonimizado na fonte).
 
-  Período / janela temporal: não há filtro explícito de calendário neste mart. As médias no
-  intermediate são médias aritméticas sobre todas as linhas de avaliação distintas do
-  extract que cumprem os filtros (ex.: todos os bimestres presentes na fonte).
+  Período / janela temporal: igual ao intermediate — sem corte de datas no mart; agrega
+  todo o período coberto pelas avaliações no extract que passam os filtros.
 
-  Percentuais (0–100): em cada faixa_etaria, cada pct_* = (contagem no estado) /
-  total_alunos × 100, com total_alunos = count(*) no grupo. Aprovado + Reprovado por
-  disciplina soma 100% dos incluídos nesse grupo (regra binária ≥ 5,0 vs < 5,0).
+  Percentuais (0–100): mesmo método que na mart por faixa etária (denominador =
+  total_alunos no bairro).
 
-  Limiar "75%": não é usado neste SQL. O critério de aprovação é nota média ≥ 5,0 (0–10)
-  por disciplina no intermediate, não um percentil nem um mínimo de 75% de cobertura.
+  Limiar "75%": não é usado. Supressão mínima neste ficheiro: having count(*) > 3 (oculta
+  bairros com até 3 alunos×turma no grupo); não é um requisito de 75% de amostra nem IC 75%.
 
   O que este mart não mede
   ------------------------
-  Frequência escolar, escola (além do que já foi filtrado upstream), inglês, evasão,
-  comparativos entre anos, incerteza estatística ou inferência para populações fora do
-  extract. Não representa alunos sem as três notas, sem par aluno×turma em turma, ou
-  excluídos no intermediate.
+  Os mesmos limites da mart por faixa etária (frequência, inglês, inferência externa, etc.).
+  Além disso, não lista bairros com total ≤ 3 (cortados pelo having). Não atribui causas
+  geográficas ao desempenho (correlação ≠ causalidade).
 */
 select
-    faixa_etaria,
+    bairro,
     count(*) as total_alunos,
     round(
         count(*) filter (where resultado_lingua_portuguesa = 'Aprovado')::numeric
@@ -60,4 +58,5 @@ select
     ) as pct_alunos_reprovados_ciencias
 from {{ ref("int_media_disciplina_por_aluno") }}
 group by
-    faixa_etaria
+    bairro
+having count(*) >= 20

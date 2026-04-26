@@ -66,7 +66,7 @@ O dbt lê **sources** no schema **`raw`** (variável `raw_schema` no `dbt_projec
 ```bash
 export POSTGRES_HOST=localhost POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres POSTGRES_DB=desafio_rmi_ds
 # opcional: RAW_SCHEMA=raw  DATA_DIR=./data
-python scripts/load_raw_educacao.py
+python scripts/load_data.py
 ```
 
 Cria o schema se precisar e as tabelas `aluno`, `escola`, `turma`, `frequencia`, `avaliacao`.
@@ -172,21 +172,41 @@ Na exploração da base carregada, registaram-se as seguintes situações em **`
 
 ---
 
-## 10. Dependências do mart `mart_resultado_por_faixa_etaria`
+## 10. Marts de resultado (`mart_resultado_por_faixa_etaria`, `mart_resultado_por_bairro`)
 
-Este mart agrega **apenas notas e faixa etária** (avaliação + cadastro + turma). **Não** usa `stg_frequencia`, `stg_escola` nem `int_educacao__aluno_frequencia`.
+### Definições (percentuais, período, população)
+
+| Tema | Definição usada neste projeto |
+|------|-------------------------------|
+| **Percentuais (0–100)** | Em cada grupo (`faixa_etaria` ou `bairro`), `pct_*` = contagem de linhas com `resultado_*` = Aprovado ou Reprovado dividida por `total_alunos` do mesmo grupo (`× 100`, arredondado a 2 casas). `total_alunos` é o número de linhas **aluno × turma** em `int_media_disciplina_por_aluno` naquele grupo. **Não** há limiar de **75%** nos modelos: o corte de aprovação é média ≥ **5,0** (escala 0–10) por disciplina no intermediate. |
+| **Período** | **Sem** filtro de datas explícito nos marts ou no `int_media_disciplina_por_aluno`. As médias são calculadas sobre **todas** as linhas de avaliação distintas do extract que passam nos filtros (em geral todos os bimestres presentes na fonte `raw.avaliacao`). |
+| **População incluída** | Alunos presentes em `stg_aluno` **e** `stg_turma` na chave `(id_aluno, id_turma)`, com **`lingua_portuguesa`**, **`matematica`** e **`ciencias`** não nulas em `stg_avaliacao`; **`bairro` não nulo** em `stg_aluno`. Inglês não entra. Cada linha do intermediate = um par aluno×turma com médias e resultados binários por disciplina. |
+| **Mart por bairro** | Igual à população acima, agregada por `bairro`. **`having count(*) > 3`**: bairros com até 3 alunos×turma no grupo **não aparecem** (supressão simples, **não** é um critério de 75%). |
+
+### O que estes marts **não** medem
+
+- **Frequência** (`stg_frequencia`) e vínculo detalhado com **escola** (além do que já está implícito no cadastro).
+- **Inglês** e qualquer disciplina fora lingua_portuguesa / matemática / ciências no intermediate.
+- Alunos **sem** as três notas, **sem** turma válida no inner join, ou **sem** `bairro` (ficam fora do pipeline destes marts).
+- **Comparação entre anos** ou séries temporais (não há partição por ano no mart).
+- **Inferência** para fora da amostra, intervalos de confiança ou causalidade (ex.: desempenho “por bairro” não implica efeito do bairro).
+
+### Dependências em cadeia
+
+Ambos os marts agregam **só** `int_media_disciplina_por_aluno` (notas + cadastro + turma). **Não** usam `stg_frequencia` nem `stg_escola` diretamente.
 
 | Camada | Model | Chaves / colunas usadas |
 |--------|--------|-------------------------|
-| **Mart** | `mart_resultado_por_faixa_etaria` | Lê `int_media_disciplina_por_aluno`; agrupa por **`faixa_etaria`**; usa `resultado_*` (Aprovado/Reprovado) para percentuais. |
-| **Intermediate** | `int_media_disciplina_por_aluno` | Grão **`(id_aluno, id_turma, faixa_etaria)`**; médias de LP, matemática e ciências; regra ≥ 5,0. |
-| **Staging** | `stg_avaliacao` | **`id_aluno`**, **`id_turma`**; **`lingua_portuguesa`**, **`matematica`**, **`ciencias`** (filtro: as três não nulas; inglês não entra no SQL). |
-| **Staging** | `stg_aluno` | **`id_aluno`**, **`id_turma`** (join com avaliação); **`faixa_etaria`**. |
+| **Mart** | `mart_resultado_por_faixa_etaria` | Lê `int_media_disciplina_por_aluno`; agrupa por **`faixa_etaria`**; percentuais a partir de `resultado_*`. |
+| **Mart** | `mart_resultado_por_bairro` | Lê o mesmo intermediate; agrupa por **`bairro`**; `having count(*) > 3`. |
+| **Intermediate** | `int_media_disciplina_por_aluno` | Grão **`(id_aluno, id_turma, faixa_etaria, bairro)`**; médias de lingua_portuguesa, matemática e ciências; regra ≥ 5,0. |
+| **Staging** | `stg_avaliacao` | **`id_aluno`**, **`id_turma`**; **`lingua_portuguesa`**, **`matematica`**, **`ciencias`** (filtro: as três não nulas). |
+| **Staging** | `stg_aluno` | **`id_aluno`**, **`id_turma`**, **`faixa_etaria`**, **`bairro`** (com `bairro is not null` no intermediate). |
 | **Staging** | `stg_turma` | **`id_aluno`**, **`id_turma`** (inner join com avaliação). |
 
 **Joins no intermediate:** `al.id_aluno = av.id_aluno` e `al.id_turma = av.id_turma`; o mesmo par **`(id_aluno, id_turma)`** para `turma_sem_duplicados`.
 
-**Materializar antes de testar o mart:** `dbt build --select mart_resultado_por_faixa_etaria` (ou `dbt run` nesse model e depois `dbt test`).
+**Materializar antes de testar:** `dbt build --select mart_resultado_por_faixa_etaria mart_resultado_por_bairro` (ou `dbt run` nesses models e depois `dbt test`).
 
 ---
 
@@ -196,7 +216,7 @@ Este mart agrega **apenas notas e faixa etária** (avaliação + cadastro + turm
 models/staging/     # stg_* + _sources.yml
 models/intermediate/
 models/marts/
-scripts/load_raw_educacao.py
+scripts/load_data.py
 dbt-config/.dbt/profiles.yml
 Dockerfile
 dbt_project.yml

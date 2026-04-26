@@ -4,12 +4,9 @@ models:
   - name: mart_resultado_por_faixa_etaria
     description: >
       Agrega int_media_disciplina_por_aluno por faixa etária: total de linhas (aluno × turma)
-      e percentuais (0–100) de aprovados/reprovados por disciplina.
-      Objeto físico no schema **marts** (separado do schema das fontes brutas `vars.raw_schema`);
-      ver `+schema: marts` e `macros/generate_schema_name.sql`. Se existir cópia antiga da mart
-      fora de **marts**, apague-a.
-      Rode `dbt run --select mart_resultado_por_faixa_etaria` antes dos testes, ou
-      `dbt build --select mart_resultado_por_faixa_etaria`.
+      e percentuais (0–100) de aprovados/reprovados por disciplina. Ver comentário no SQL e
+      secção 10 do README (população, período, limites do indicador).
+
     columns:
       - name: faixa_etaria
         description: Faixa etária do agrupamento.
@@ -61,6 +58,67 @@ models:
               max_value: 100.0
       - name: pct_alunos_reprovados_ciencias
         description: Percentual reprovados em ciências na faixa.
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 100.0
+
+  - name: mart_resultado_por_bairro
+    description: >
+      Agrega int_media_disciplina_por_aluno por bairro (identificador na fonte). Só inclui
+      bairros com mais de 3 linhas aluno×turma (having). Ver comentário no SQL e secção 10
+      do README.
+
+    columns:
+      - name: bairro
+        description: Identificador de bairro (fonte anonimizada).
+        tests:
+          - not_null
+          - unique
+      - name: total_alunos
+        description: Quantidade de linhas (aluno × turma) no bairro (sempre > 3 pelo having).
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 4.0
+      - name: pct_alunos_aprovados_lingua_portuguesa
+        description: Percentual aprovados em língua portuguesa no bairro.
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 100.0
+      - name: pct_alunos_reprovados_lingua_portuguesa
+        description: Percentual reprovados em língua portuguesa no bairro.
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 100.0
+      - name: pct_alunos_aprovados_matematica
+        description: Percentual aprovados em matemática no bairro.
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 100.0
+      - name: pct_alunos_reprovados_matematica
+        description: Percentual reprovados em matemática no bairro.
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 100.0
+      - name: pct_alunos_aprovados_ciencias
+        description: Percentual aprovados em ciências no bairro.
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 100.0
+      - name: pct_alunos_reprovados_ciencias
+        description: Percentual reprovados em ciências no bairro.
         tests:
           - not_null
           - dbt_utils.accepted_range:

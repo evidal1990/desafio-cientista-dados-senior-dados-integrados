@@ -25,8 +25,11 @@ aluno_sem_duplicados as (
     select distinct
         id_turma,
         id_aluno,
-		faixa_etaria
+		faixa_etaria,
+		bairro
     from {{ ref("stg_aluno") }}
+	where 
+		bairro is not null
 ),
 turma_sem_duplicados as (
     select distinct
@@ -39,6 +42,7 @@ media_disciplinas as(
 		av.id_aluno,
 		av.id_turma,
 		al.faixa_etaria,
+		al.bairro,
 		round(avg(lingua_portuguesa)::numeric, 1) as media_lingua_portuguesa,
 		round(avg(matematica)::numeric, 1) as media_matematica,
 		round(avg(ciencias)::numeric, 1) as media_ciencias
@@ -53,13 +57,15 @@ media_disciplinas as(
 	group by
 		av.id_aluno,
 		av.id_turma,
-		al.faixa_etaria
+		al.faixa_etaria,
+		al.bairro
 )
 
 select 
 	id_aluno,
 	id_turma,
 	faixa_etaria,
+	bairro,
 	case
 		when (media_lingua_portuguesa) >= 5.0 
 		then 'Aprovado' 
