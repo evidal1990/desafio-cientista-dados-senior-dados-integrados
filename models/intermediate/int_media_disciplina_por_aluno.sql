@@ -1,4 +1,4 @@
-{{ config(materialized="ephemeral", tags=["intermediate", "educacao_raw"]) }}
+{{ config(materialized="ephemeral", schema="intermediate", tags=["intermediate", "raw"]) }}
 
 /*
   Cálculo de médias das notas nas linhas de avaliação distintas que passam nos filtros de nulidade.

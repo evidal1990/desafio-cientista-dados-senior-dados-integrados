@@ -1,12 +1,12 @@
 version: 2
 
 sources:
-  - name: educacao_raw
+  - name: raw
     description: >
       Fontes brutas educacionais anônimas (desafio RMI): equivalentes aos Parquets em
-      gs://case_vagas/rmi/, carregadas no Postgres no schema definido por `vars.educacao_raw_schema`
-      (padrão `educacao_raw`). IDs sensíveis vêm como texto hex (carga via `scripts/load_raw_educacao.py`).
-    schema: "{{ var('educacao_raw_schema') }}"
+      gs://case_vagas/rmi/, carregadas no Postgres no schema definido por `vars.raw_schema`
+      (padrão `raw`, igual ao `RAW_SCHEMA` do `scripts/load_data.py`). IDs sensíveis vêm como texto hex.
+    schema: "{{ var('raw_schema') }}"
     tables:
       - name: aluno
         description: >

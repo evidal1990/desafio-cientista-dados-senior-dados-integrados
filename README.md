@@ -61,15 +61,16 @@ gsutil -m cp \
 
 ## 4. Criar tabelas brutas no Postgres
 
-O dbt lê **sources** no schema **`raw_educacao`** (variável `raw_schema` no `dbt_project.yml`).
+O dbt lê **sources** no schema **`raw`** (variável `raw_schema` no `dbt_project.yml`).
 
 ```bash
 export POSTGRES_HOST=localhost POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres POSTGRES_DB=desafio_rmi_ds
-# opcional: RAW_SCHEMA=raw_educacao  DATA_DIR=./data
+# opcional: RAW_SCHEMA=raw  DATA_DIR=./data
 python scripts/load_raw_educacao.py
 ```
 
 Cria o schema se precisar e as tabelas `aluno`, `escola`, `turma`, `frequencia`, `avaliacao`.
+O script usa **`RAW_SCHEMA`** (padrão **`raw`**), alinhado a `vars.raw_schema` no dbt.
 
 ---
 
@@ -78,7 +79,7 @@ Cria o schema se precisar e as tabelas `aluno`, `escola`, `turma`, `frequencia`,
 - **Nome do profile:** `desafio_rmi_ds` (igual a `profile:` no `dbt_project.yml`).
 - Copie `dbt-config/.dbt/profiles.yml` para `~/.dbt/profiles.yml` **ou** use `profiles.yml.example` como modelo.
 - Ajuste **host**, **password** e **dbname** se necessário. O ficheiro no repo usa **valores literais** (sem `env_var`).
-- **`schema` no profile:** em **dev** está alinhado com `raw_educacao`; em **`--target prod`** usa outro schema (ex.: `desafio_rmi_ds_prod`). Em **dev**, o schema físico dos models **sem** `+schema` segue também `vars.raw_schema` via `macros/generate_schema_name.sql`.
+- **`schema` no profile (dev):** usado para models **sem** `+schema` literal na macro (ver `generate_schema_name.sql`). Os `stg_*` usam **`+schema: staging`** e, em dev, o schema físico é só **`staging`** (não `{{ target.schema }}_staging`). Pode ser diferente de `vars.raw_schema` (tabelas brutas). Em **`--target prod`** use outro `target.schema` (ex.: `desafio_rmi_ds_prod`).
 
 ---
 
@@ -131,9 +132,11 @@ Alternativa de build: `docker build -f dbt-config/Dockerfile -t desafio-dbt:dev 
 
 | O quê | Onde |
 |--------|--------|
-| Tabelas brutas (carga Python) | schema **`raw_educacao`** |
-| Views `stg_*` e marts (dev) | mesmo schema **`raw_educacao`** (macro `generate_schema_name`; `target` ≠ `prod`) |
-| Marts em **prod** | schema do output **`prod`** no `profiles.yml` |
+| Tabelas brutas (carga Python) | schema **`vars.raw_schema`** (padrão **`raw`**; ver `dbt_project.yml`) |
+| Views **`stg_*`** (dev) | schema físico **`staging`** (`+schema: staging`; macro dev não prefixa com `target.schema`) |
+| Tabelas **`mart_*`** | schema físico **`marts`** (separado do schema dos dados brutos) |
+| **Intermediate** `ephemeral` | sem tabela/view no Postgres (SQL inlinado nos downstream) |
+| **prod** | `stg_*` em **`{target.schema}_staging`**; **`mart_*`** no schema **`marts`** |
 
 ---
 

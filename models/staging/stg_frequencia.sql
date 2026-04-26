@@ -1,7 +1,7 @@
-{{ config(tags=["staging", "educacao_raw"]) }}
+{{ config(schema="staging", tags=["staging", "raw"]) }}
 
 with raw as (
-    select * from {{ source("educacao_raw", "frequencia") }}
+    select * from {{ source("raw", "frequencia") }}
 )
 select
     id_escola::bigint,

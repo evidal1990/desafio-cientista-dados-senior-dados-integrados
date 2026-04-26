@@ -1,20 +1,29 @@
 {#-
-  Dev (e targets != prod): models sem `+schema` → `vars.raw_schema` (ex.: raw_educacao),
-  alinhado às tabelas brutas e à carga Parquet.
+  Dev (e targets != prod):
+  - `+schema: staging` | `intermediate` | `marts` → nomes físicos literais (**`staging`**, **`intermediate`**, **`marts`**),
+    sem prefixar `target.schema` (evita `raw_educacao_staging` só pelo `schema:` do profile).
+  - Sem `+schema` → `vars.raw_schema` (tabelas brutas / models sem custom).
+  - As **sources** usam `vars.raw_schema` em `_sources.yml` (carga Python).
 
-  Prod: volta ao padrão dbt (`target.schema` do profile, com sufixo se houver `+schema`).
+  Prod:
+  - Sem `+schema` → `target.schema`.
+  - Com `+schema` → `target.schema` + `_` + custom (ex.: `desafio_rmi_ds_prod_staging`).
 
-  Se um model definir `+schema: x`, o schema final é `{{ target.schema }}_x`.
+  Intermediate `ephemeral` não cria relação no warehouse.
 -#}
 {% macro generate_schema_name(custom_schema_name, node) -%}
-    {%- if target.name == 'prod' -%}
+    {%- if custom_schema_name is not none and custom_schema_name | trim | lower == 'marts' -%}
+        marts
+    {%- elif target.name == 'prod' -%}
         {%- if custom_schema_name is none -%}
             {{ target.schema }}
         {%- else -%}
             {{ target.schema }}_{{ custom_schema_name | trim }}
         {%- endif -%}
     {%- else -%}
-        {%- if custom_schema_name is none -%}
+        {%- if custom_schema_name is not none and custom_schema_name | trim | lower in ['staging', 'intermediate'] -%}
+            {{ custom_schema_name | trim }}
+        {%- elif custom_schema_name is none -%}
             {{ var('raw_schema') }}
         {%- else -%}
             {{ target.schema }}_{{ custom_schema_name | trim }}

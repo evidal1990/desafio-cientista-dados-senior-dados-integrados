@@ -1,7 +1,7 @@
-{{ config(tags=["staging", "educacao_raw"]) }}
+{{ config(schema="staging", tags=["staging", "raw"]) }}
 
 with source as (
-    select * from {{ source("educacao_raw", "turma") }}
+    select * from {{ source("raw", "turma") }}
 )
 select
     ano::int,

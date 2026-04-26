@@ -1,4 +1,4 @@
-{{ config(materialized="table", tags=["marts", "educacao_raw"]) }}
+{{ config(materialized="table", schema="marts", tags=["marts", "raw"]) }}
 
 /*
   Percentual de alunos aprovados e reprovados por disciplina e faixa etária.

@@ -1,7 +1,7 @@
-{{ config(tags=["staging", "educacao_raw"]) }}
+{{ config(schema="staging", tags=["staging", "raw"]) }}
 
 with source as (
-    select * from {{ source("educacao_raw", "aluno") }}
+    select * from {{ source("raw", "aluno") }}
 )
 select
     trim(lower(id_aluno::text)) as id_aluno,

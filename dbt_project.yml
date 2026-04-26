@@ -19,13 +19,13 @@ models:
   desafio_rmi_ds:
     staging:
       +materialized: view
+      +schema: staging
     intermediate:
       +materialized: ephemeral
+      +schema: intermediate
     marts:
       +materialized: table
+      +schema: marts
 
 vars:
-  # Schema físico das tabelas declaradas em `models/staging/_sources.yml` (carga: `EDUCACAO_RAW_SCHEMA`).
-  educacao_raw_schema: educacao_raw
-  # Por omissão, models sem `+schema` em dev (ver `macros/generate_schema_name.sql`).
-  raw_schema: educacao_raw
+  raw_schema: raw

@@ -5,8 +5,11 @@ models:
     description: >
       Agrega int_media_disciplina_por_aluno por faixa etária: total de linhas (aluno × turma)
       e percentuais (0–100) de aprovados/reprovados por disciplina.
-      Rode `dbt run --select mart_resultado_por_faixa_etaria` antes dos testes, ou use
-      `dbt build --select mart_resultado_por_faixa_etaria` para materializar e testar.
+      Objeto físico no schema **marts** (separado do schema das fontes brutas `vars.raw_schema`);
+      ver `+schema: marts` e `macros/generate_schema_name.sql`. Se existir cópia antiga da mart
+      fora de **marts**, apague-a.
+      Rode `dbt run --select mart_resultado_por_faixa_etaria` antes dos testes, ou
+      `dbt build --select mart_resultado_por_faixa_etaria`.
     columns:
       - name: faixa_etaria
         description: Faixa etária do agrupamento.
