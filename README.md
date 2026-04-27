@@ -13,6 +13,7 @@ Projeto **dbt Core + Postgres**: staging → intermediate → marts. Dados anoni
 | Compromissos assumidos                                                                             | [Trade-offs](#entrega-tradeoffs)                  |
 | Próximos passos                                                                                    | [O que faria com mais tempo](#entrega-mais-tempo) |
 | Esquema no Postgres, qualidade dos dados, marts e testes em detalhe                                | Seções **8–13**                                   |
+| Análise exploratória dos dados                                | Seção **16**                                   |
 
 
 ---
@@ -224,7 +225,7 @@ export POSTGRES_HOST=localhost POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres
 python scripts/load_data.py
 ```
 
-**Windows (PowerShell)** — com o `.venv` activo:
+**Windows (PowerShell)** — com o `.venv` ativo:
 
 ```powershell
 $env:POSTGRES_HOST = "localhost"
@@ -592,18 +593,11 @@ O notebook [notebooks/eda.ipynb](notebooks/eda.ipynb) aplica o carregamento dos 
 **Pré-requisitos**
 
 - Dados em `data/` (pastas com Parquet, por exemplo `aluno`, `avaliacao`, `escola`, `frequencia`, `turma`).
-- O ambiente virtual do projeto (seção **1. Clonar e ambiente Python** acima) activo.
+- O ambiente virtual do projeto (seção **1. Clonar e ambiente Python** acima) ativo.
 
 **Instalação das dependências do EDA**
 
-Em `polars` e `pyarrow` o `read_parquet` lê ficheiros Parquet; o notebook também usa `matplotlib` e `seaborn` para gráficos. Com o venv activo:
-
-```bash
-pip install -r requirements.txt
-pip install matplotlib seaborn
-```
-
-*(As primeiras células do notebook podem repetir `pip install` de bibliotecas; podes ignora-las ou alinha-las com o que já instalaste no venv.)*
+s primeiras células do notebook contém as bibliotecas necessárias e os comandos para instalá-las.
 
 **Caminhos**
 
