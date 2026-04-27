@@ -124,7 +124,7 @@ Na máquina host (porta **5432** livre). O mesmo comando funciona em **macOS, Li
 docker run -d --name postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=desafio_rmi_ds -p 5432:5432 postgres:16
 ```
 
-- **pgAdmin / dbt no host:** host `localhost`, porta `5432`, base `desafio_rmi_ds`, utilizador `postgres`, palavra-passe `postgres` (ajuste se mudar o `-e`).
+- **pgAdmin / dbt no host:** host `localhost`, porta `5432`, base `desafio_rmi_ds`, utilizador `postgres`, senha `postgres` (ajuste se mudar o `-e`).
 - **Windows:** com Docker Desktop + WSL2, `localhost:5432` no Windows costuma chegar ao Postgres no contêiner; se não ligar, consulte a documentação do Docker Desktop sobre portas e firewall.
 - **Remover:** `docker rm -f postgres` (e `docker rmi postgres:16` só depois de remover o contêiner).
 
@@ -220,7 +220,10 @@ O dbt lê **sources** no schema `**raw`** (variável `raw_schema` no `dbt_projec
 **macOS / Linux (bash)**
 
 ```bash
-export POSTGRES_HOST=localhost POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres POSTGRES_DB=desafio_rmi_ds
+export POSTGRES_HOST=localhost
+export POSTGRES_USER=postgres
+export POSTGRES_PASSWORD=postgres 
+export POSTGRES_DB=desafio_rmi_ds
 # opcional: RAW_SCHEMA=raw DATA_DIR=./data
 python scripts/load_data.py
 ```
