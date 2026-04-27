@@ -4,9 +4,6 @@ config-version: 2
 
 profile: "desafio_rmi_ds"
 
-flags:
-  partial_parse: false
-
 model-paths: ["models"]
 analysis-paths: ["analyses"]
 test-paths: ["tests"]

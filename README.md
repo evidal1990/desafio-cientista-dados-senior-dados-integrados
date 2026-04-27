@@ -2,6 +2,83 @@
 
 Projeto **dbt Core + Postgres**: staging → intermediate → marts. Dados anonimizados (Parquets no GCS).
 
+### Conteúdo desta entrega
+
+
+| Tema                                                                                               | Onde no README                                    |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Setup (Python, Docker, Postgres, carga, perfil dbt) e execução (`dbt deps`, `run`, `test`, `docs`) | Seções **1–7**                                    |
+| Lineage e camadas                                                                                  | [Visão do lineage](#entrega-lineage)              |
+| Materializações, convenções de nome, testes                                                        | [Decisões de arquitetura](#entrega-arquitetura)   |
+| Compromissos assumidos                                                                             | [Trade-offs](#entrega-tradeoffs)                  |
+| Próximos passos                                                                                    | [O que faria com mais tempo](#entrega-mais-tempo) |
+| Esquema no Postgres, qualidade dos dados, marts e testes em detalhe                                | Seções **8–13**                                   |
+
+
+---
+
+
+
+## Visão do lineage
+
+Os dados entram no warehouse pelo script `scripts/load_data.py`, que materializa as fontes no schema `**raw`** (variável `raw_schema`). O dbt referencia essas tabelas como **sources** e aplica três camadas lógicas.
+
+**Fluxo em palavras.** Cada ficheiro Parquet vira uma tabela em `raw`. Os modelos `**stg_*`** (pasta `models/staging/`) são **views** no schema físico `staging` após tratamentos de tipos e colunas renomeadas. O modelo `**int_media_disciplina_por_aluno`** presente em `models/intermediate/`, é **ephemeral** (não cria objeto no Postgres). Por fim, `**mart_resultado_por_faixa_etaria`** e `**mart_resultado_por_bairro**` são **tabelas** no schema `marts`, agregando apenas o intermediate (médias por disciplina, regra de aprovação ≥ 5.0 e percentuais por faixa etária ou bairro).
+
+**Ramo isolado.** `stg_escola` e `stg_frequencia` alimentam testes e possíveis análises futuras, mas **não** entram no DAG destes dois marts de resultado; o grão analítico dos marts é aluno × turma com notas, vindo de `stg_aluno`, `stg_turma` e `stg_avaliacao`.
+
+![Grafo de dependências (lineage) dos modelos dbt neste projeto](dbt-dag.png)
+
+Para o grafo interativo gerado pelo dbt: `dbt docs generate && dbt docs serve`.
+
+---
+
+
+
+## Decisões de arquitetura
+
+**Materializações** (definidas em `dbt_project.yml` por pasta):
+
+- **Staging:** `view` — baixo custo de armazenamento, dados sempre atualizados (freshness) e processamento rápido do pipeline.
+- **Intermediate:** `ephemeral` — um único modelo (`int_media_disciplina_por_aluno`) reutilizado por dois marts, evitando tabela intermédia redundante, visto que o SQL já é o “contrato” entre staging e marts.
+- **Marts:** `table` — quantidade de linhas é pouca o suficiente para não usar `incremental`, garantindo uma boa performance para os dados serem utilizados em BI.
+
+**Convenções de nome**
+
+- Prefixo `**stg_**`: uma view por fonte (aluno, avaliacao, etc)
+- Prefixo `**int_**`: lógica de negócio e joins entre entidades do staging
+- Prefixo `**mart_**`: agregações orientadas a KPIs.
+
+As pastas espelham a camada (`models/staging`, `models/intermediate`, `models/marts`), o que simplifica `dbt run --select path:...`.
+
+**Estratégia de testes**
+
+- **Genéricos** em `schema.yml`: `not_null`, `unique`, `relationships`, `accepted_values`, `accepted_range`, `expression_is_true` — contrato por coluna e integridade referencial onde a fonte deveria respeitar o modelo de dados.
+- **Singulares** em `tests/*.sql`: regras documentadas na seção **13**.
+- **Expectativa operacional:** `dbt run` deve passar após a carga; `dbt test` no staging pode falhar porque os dados reais violam o contrato ideal, onde as falhas são tratadas como incosistências vindas da fonte (ver seção **9**).
+
+---
+
+
+
+## Trade-offs
+
+
+| Decisão                                                                     | Benefício                                                                                        | Custo / risco                                                                                                                            |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Intermediate **ephemeral**                                                  | Menos objetos no warehouse, DAG simples, alterações propagam-se sem refresh de tabela intermédia | Não é possível `SELECT` direto no intermediate nem inspecionar row counts no Postgres; depuração passa pelo SQL compilado ou pelos marts |
+| KPIs só com **lingua_portuguesa, matematica e ciencias** e **bairro não nulo**            | Definição clara de população e comparabilidade entre marts                                       | Exclui a disciplina ingles, de modo que os percentuais não representam todos os alunos.                    |
+
+
+---
+
+
+
+## O que faria com mais tempo
+
+- Sinalizar os registros que falham indicando qual a falha e se é True ou False em vez de apenas deixar o teste falhar. Outra opção seria adicionar a uma view para conseguir iterar sobre os registros.
+- Criar mais um intermediate e um mart relacionado a **frequência** e **escola** (adicionar ao lineage).
+
 ---
 
 ## Pré-requisitos
@@ -34,7 +111,7 @@ pip install -r requirements.txt
 
 Se `Activate.ps1` for bloqueado por política de execução, numa consola **PowerShell** (uma vez): `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`. Alternativa: **Prompt de Comando** → `cd` para a pasta do repo e `.\.venv\Scripts\activate.bat`.
 
-_Não foi possível validar estes passos numa VM Windows daqui; seguem convenções oficiais da Microsoft/Google/Docker. Se algo falhar no teu PC, indica a versão do Windows e o terminal (PowerShell 5 vs 7, cmd, Git Bash)._
+*Não foi possível validar estes passos numa VM Windows daqui; seguem convenções oficiais da Microsoft/Google/Docker. Se algo falhar no teu PC, indica a versão do Windows e o terminal (PowerShell 5 vs 7, cmd, Git Bash).*
 
 ---
 
@@ -129,7 +206,7 @@ docker run -it --rm --name desafio-dbt-dev \
 
 Dentro do contêiner: `cd /work` e, se o Postgres estiver no host, `host` em `profiles.yml` → `host.docker.internal`.
 
-Alternativa de build: `docker build -f dbt-config/Dockerfile -t desafio-dbt:dev dbt-config` — ver [`dbt-config/README.md`](dbt-config/README.md).
+Alternativa de build: `docker build -f dbt-config/Dockerfile -t desafio-dbt:dev dbt-config` — ver `[dbt-config/README.md](dbt-config/README.md)`.
 
 **Remover imagem/contêiner dbt:** `docker rm -f desafio-dbt-dev` → `docker rmi desafio-dbt:dev`.
 
@@ -137,7 +214,7 @@ Alternativa de build: `docker build -f dbt-config/Dockerfile -t desafio-dbt:dev 
 
 ## 5. Criar tabelas brutas no Postgres
 
-O dbt lê **sources** no schema **`raw`** (variável `raw_schema` no `dbt_project.yml`).
+O dbt lê **sources** no schema `**raw`** (variável `raw_schema` no `dbt_project.yml`).
 
 **macOS / Linux (bash)**
 
@@ -168,7 +245,7 @@ set POSTGRES_DB=desafio_rmi_ds
 python scripts\load_data.py
 ```
 
-Cria o schema se precisar e as tabelas `aluno`, `escola`, `turma`, `frequencia`, `avaliacao`. O script usa **`RAW_SCHEMA`** (padrão **`raw`**), alinhado a `vars.raw_schema` no dbt.
+Cria o schema se precisar e as tabelas `aluno`, `escola`, `turma`, `frequencia`, `avaliacao`. O script usa `**RAW_SCHEMA**` (padrão `**raw**`), alinhado a `vars.raw_schema` no dbt.
 
 ---
 
@@ -178,7 +255,7 @@ Cria o schema se precisar e as tabelas `aluno`, `escola`, `turma`, `frequencia`,
 - **macOS / Linux:** copie `dbt-config/.dbt/profiles.yml` para `~/.dbt/profiles.yml` **ou** use `profiles.yml.example` como modelo.
 - **Windows:** pasta do dbt no utilizador → `%USERPROFILE%\.dbt\` (ex.: `C:\Users\TuNome\.dbt\`). Crie a pasta se não existir e copie o ficheiro, por exemplo no PowerShell: `New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.dbt" | Out-Null` e `Copy-Item -Force "dbt-config\.dbt\profiles.yml" "$env:USERPROFILE\.dbt\profiles.yml"`.
 - Ajuste **host**, **password** e **dbname** se necessário. O ficheiro no repo usa **valores literais** (sem `env_var`).
-- **`schema` no profile (dev):** usado para models **sem** `+schema` literal na macro (ver `generate_schema_name.sql`). Os `stg_*` usam **`+schema: staging`** e, em dev, o schema físico é só **`staging`** (não `{{ target.schema }}_staging`). Pode ser diferente de `vars.raw_schema` (tabelas brutas). Em **`--target prod`** use outro `target.schema` (ex.: `desafio_rmi_ds_prod`).
+- `**schema` no profile (dev):** usado para models **sem** `+schema` literal na macro (ver `generate_schema_name.sql`). Os `stg_*` usam `**+schema: staging`** e, em dev, o schema físico é só `**staging**` (não `{{ target.schema }}_staging`). Pode ser diferente de `vars.raw_schema` (tabelas brutas). Em `**--target prod**` use outro `target.schema` (ex.: `desafio_rmi_ds_prod`).
 
 ---
 
@@ -204,7 +281,7 @@ dbt docs generate && dbt docs serve
 - **Só testes singulares em `tests/`:** `dbt test --select path:tests`
 - `dbt compile` não cria objetos no warehouse; só `dbt run` / `dbt build`.
 
-Neste extract público, **`dbt test` pode falhar** em testes de qualidade do staging (`not_null`, `relationships`, `unique`, etc.) por inconsistências já descritas em **§9** — não indica por si só que o ambiente ou os passos 1–6 estão errados. **`dbt run`** deve concluir com sucesso após a carga em **§5**. `dbt docs serve` abre um servidor local (Ctrl+C para sair).
+Neste extract público, `**dbt test` pode falhar** em testes de qualidade do staging (`not_null`, `relationships`, `unique`, etc.) por inconsistências já descritas em **§9** — não indica por si só que o ambiente ou os passos 1–6 estão errados. `**dbt run`** deve concluir com sucesso após a carga em **§5**. `dbt docs serve` abre um servidor local (Ctrl+C para sair).
 
 ---
 
