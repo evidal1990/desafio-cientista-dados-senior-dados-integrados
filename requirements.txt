@@ -55,6 +55,7 @@ pathspec==0.12.1
 polars==1.40.0
 polars-runtime-32==1.40.0
 propcache==0.4.1
+pyarrow==24.0.0
 protobuf==6.33.6
 psycopg2-binary==2.9.12
 pyasn1==0.6.3
