@@ -68,7 +68,7 @@ As pastas espelham a camada (`models/staging`, `models/intermediate`, `models/ma
 | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | Intermediate **ephemeral**                                                  | Menos objetos no warehouse, DAG simples, alterações propagam-se sem refresh de tabela intermédia | Não é possível `SELECT` direto no intermediate nem inspecionar row counts no Postgres; depuração passa pelo SQL compilado ou pelos marts |
 | KPIs só com **lingua_portuguesa, matematica e ciencias** e **bairro não nulo**            | Definição clara de população e comparabilidade entre marts                                       | Exclui a disciplina ingles, de modo que os percentuais não representam todos os alunos.                    |
-
+| INNER JOIN (excluindo registros de avaliação que não têm aluno e turma associado)            | Definição clara de população garantindo que os dados são consistentes                                       | Perco registros na minha análise.                    |
 
 ---
 
@@ -582,6 +582,37 @@ dbt_project.yml
 ## 15. Pacotes dbt
 
 Se usar `packages.yml`: `dbt deps` antes de `dbt run`.
+
+---
+
+## 16. Análise exploratória de dados (EDA)
+
+O notebook [notebooks/eda.ipynb](notebooks/eda.ipynb) aplica o carregamento dos **Parquet** com **Polars**, tabelas descritivas e gráficos (por exemplo, Matplotlib/Seaborn) sobre o mesmo `data/` descrito em **3. Baixar Parquets para `data/`** (acima).
+
+**Pré-requisitos**
+
+- Dados em `data/` (pastas com Parquet, por exemplo `aluno`, `avaliacao`, `escola`, `frequencia`, `turma`).
+- O ambiente virtual do projeto (seção **1. Clonar e ambiente Python** acima) activo.
+
+**Instalação das dependências do EDA**
+
+Em `polars` e `pyarrow` o `read_parquet` lê ficheiros Parquet; o notebook também usa `matplotlib` e `seaborn` para gráficos. Com o venv activo:
+
+```bash
+pip install -r requirements.txt
+pip install matplotlib seaborn
+```
+
+*(As primeiras células do notebook podem repetir `pip install` de bibliotecas; podes ignora-las ou alinha-las com o que já instalaste no venv.)*
+
+**Caminhos**
+
+As células de leitura usam caminhos relativos do tipo `../data/<pasta>`. Abre o ficheiro a partir de `notebooks/eda.ipynb` e **usa como pasta de trabalho do kernel a pasta `notebooks/`** (comportamento habitual no Cursor, VS Code ou Jupyter quando o notebook está nessa pasta), para que `..` aponte correctamente à raiz do repositório.
+
+**Como executar**
+
+1. Abrir `notebooks/eda.ipynb` e executar as células **por ordem** (ou “Run All”), a partir do topo, para respeitar imports e o fluxo de leitura dos dados.
+2. Opcional, pela linha de comando: após `pip install jupyter`, a partir da raiz do repositório podes fazer `jupyter notebook notebooks/eda.ipynb` (ou `jupyter lab`) e abrir o mesmo ficheiro no browser.
 
 ---
 
